@@ -22,4 +22,4 @@ frontend/coverage/
 # Local database files
 data/
 mysql-data/
-
+.runtime/

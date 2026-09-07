@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { SwitchButton } from '@element-plus/icons-vue'
+import { useAuthStore } from '@/stores/auth'
+import ErrorTracePanel from '@/components/ErrorTracePanel.vue'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 const currentTitle = computed(() => String(route.meta.title ?? 'LemonGo'))
+
+onMounted(() => {
+  auth.refreshProfile().catch(() => undefined)
+})
 
 const userMenu = [
   { path: '/products', title: '商品', icon: 'Goods' },
@@ -19,6 +29,11 @@ const monitorMenu = [
   { path: '/monitor/modules', title: '模块监控', icon: 'FolderOpened' },
   { path: '/monitor/developers', title: '开发者', icon: 'Platform' },
 ]
+
+function logout() {
+  auth.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -59,9 +74,23 @@ const monitorMenu = [
 
     <el-container>
       <el-header class="app-header">
-        <span class="page-title">{{ currentTitle }}</span>
+        <div class="header-inner">
+          <span class="page-title">{{ currentTitle }}</span>
+          <div v-if="auth.profile" class="user-box">
+            <el-tag effect="plain" round class="user-tag">
+              {{ auth.profile.nickname }} · 活跃度 {{ auth.profile.activityScore }}
+            </el-tag>
+            <el-button text circle aria-label="退出登录" @click="logout">
+              <el-icon><SwitchButton /></el-icon>
+            </el-button>
+          </div>
+          <el-button v-else type="primary" plain @click="router.push('/login')">
+            登录
+          </el-button>
+        </div>
       </el-header>
       <el-main class="app-main">
+        <ErrorTracePanel />
         <RouterView />
       </el-main>
     </el-container>
@@ -147,8 +176,25 @@ const monitorMenu = [
   font-weight: 600;
 }
 
+.header-inner {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-tag {
+  color: var(--lg-green);
+  font-weight: 600;
+}
+
 .app-main {
   background: #f3f5f7;
 }
 </style>
-

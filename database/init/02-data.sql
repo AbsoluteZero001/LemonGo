@@ -42,7 +42,9 @@ VALUES
     (22, '/api/test/error/404', 'GET', 5, 'TestErrorController', 'notFound', NULL, NULL, '模拟 404', 10003),
     (23, '/api/test/error/500', 'GET', 5, 'TestErrorController', 'serverError', 'TestErrorService.throwServerError', NULL, '模拟 500', 10003),
     (24, '/api/test/error/database', 'GET', 5, 'TestErrorController', 'databaseError', 'TestErrorService.throwDatabaseError', 'TestErrorMapper', '模拟数据库异常', 10003),
-    (25, '/api/test/error/service', 'GET', 5, 'TestErrorController', 'serviceError', 'TestErrorService.throwServiceError', NULL, '模拟 Service 异常', 10003);
+    (25, '/api/test/error/service', 'GET', 5, 'TestErrorController', 'serviceError', 'TestErrorService.throwServiceError', NULL, '模拟 Service 异常', 10003),
+    (26, '/api/orders/{id}/pay', 'POST', 4, 'OrderController', 'pay', 'OrderService.pay', 'OrderMasterMapper', '模拟支付订单', 10002),
+    (27, '/api/monitor/developers', 'GET', 5, 'MonitorController', 'developers', 'MonitorService.developers', NULL, '开发者监控', 10003);
 
 -- Seed users use a salted hash design that will be finalized together with JWT login.
 INSERT INTO sys_user
@@ -54,10 +56,14 @@ VALUES
 INSERT INTO product
     (id, product_name, category, price, stock, sales, image_url, detail_text, status)
 VALUES
-    (1, 'LemonGo 有机柠檬 5kg', '生鲜水果', 39.90, 500, 3280, '/assets/products/lemon-box.jpg', '模拟电商商品：新鲜有机柠檬。', 1),
-    (2, 'LemonGo 随行榨汁杯', '厨房电器', 129.00, 300, 1205, '/assets/products/juicer-cup.jpg', '模拟电商商品：便携榨汁杯。', 1),
-    (3, 'LemonGo 冰感运动毛巾', '运动户外', 19.90, 1000, 8921, '/assets/products/towel.jpg', '模拟电商商品：轻薄快干毛巾。', 1),
-    (4, 'LemonGo 轻量双肩包', '箱包配件', 259.00, 200, 635, '/assets/products/backpack.jpg', '模拟电商商品：通勤双肩包。', 1),
-    (5, 'LemonGo 智能保温杯', '家居生活', 169.00, 400, 2170, '/assets/products/thermos.jpg', '模拟电商商品：智能显温保温杯。', 1),
-    (6, 'LemonGo 午睡眼罩套装', '家居生活', 49.90, 600, 4142, '/assets/products/eye-mask.jpg', '模拟电商商品：遮光眼罩与耳塞。', 1);
+    (1, 'LemonGo 有机柠檬 5kg', '生鲜水果', 39.90, 500, 3280, '/assets/products/lemon-box.svg', '模拟电商商品：新鲜有机柠檬。', 1),
+    (2, 'LemonGo 随行榨汁杯', '厨房电器', 129.00, 300, 1205, '/assets/products/juicer-cup.svg', '模拟电商商品：便携榨汁杯。', 1),
+    (3, 'LemonGo 冰感运动毛巾', '运动户外', 19.90, 1000, 8921, '/assets/products/towel.svg', '模拟电商商品：轻薄快干毛巾。', 1),
+    (4, 'LemonGo 轻量双肩包', '箱包配件', 259.00, 200, 635, '/assets/products/backpack.svg', '模拟电商商品：通勤双肩包。', 1),
+    (5, 'LemonGo 智能保温杯', '家居生活', 169.00, 400, 2170, '/assets/products/thermos.svg', '模拟电商商品：智能显温保温杯。', 1),
+    (6, 'LemonGo 午睡眼罩套装', '家居生活', 49.90, 600, 4142, '/assets/products/eye-mask.svg', '模拟电商商品：遮光眼罩与耳塞。', 1);
 
+INSERT INTO cart_item (user_id, product_id, quantity, checked)
+VALUES
+    (1, 1, 2, 1),
+    (1, 3, 1, 1);

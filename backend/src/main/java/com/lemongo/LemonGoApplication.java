@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @ConfigurationPropertiesScan
 @EnableScheduling
-@MapperScan("com.lemongo.mapper")
+@MapperScan({"com.lemongo.mapper", "com.lemongo.observability.mapper"})
 public class LemonGoApplication {
 
     public static void main(String[] args) {

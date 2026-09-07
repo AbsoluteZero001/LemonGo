@@ -11,11 +11,18 @@ const RequestDetailView = () => import('@/views/request-log/RequestDetailView.vu
 const UserActivityView = () => import('@/views/users/UserActivityView.vue')
 const ModuleMonitorView = () => import('@/views/modules/ModuleMonitorView.vue')
 const DeveloperMonitorView = () => import('@/views/developers/DeveloperMonitorView.vue')
+const LoginView = () => import('@/views/LoginView.vue')
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', redirect: '/products' },
+    {
+      path: '/login',
+      name: 'Login',
+      component: LoginView,
+      meta: { title: '登录' },
+    },
     {
       path: '/products',
       name: 'ProductList',
@@ -86,4 +93,3 @@ const router = createRouter({
 })
 
 export default router
-

@@ -53,6 +53,19 @@ LemonGo
 
 ## 当前进度
 
-当前处于 **M0 架构初始化**：仓库骨架、技术基线、数据库第一版设计和可编译的后端基础层已经落地。业务链路、实时统计与监控页面按 [docs/02-roadmap.md](docs/02-roadmap.md) 推进。
+已完成可运行的 **M1-M3 演示闭环**：
+
+- 用户端：登录、商品列表/详情、购物车、创建订单、模拟支付
+- 链路底座：TraceFilter + AOP 采集 Controller/Service/Mapper，Request ID 贯穿响应与日志
+- 请求日志：每次请求写入 MySQL，Dashboard 展示近 7 日访问/异常趋势
+- 活跃度：Redis 记录在线与计数，MySQL 持久化日维度访问量、活跃时间、活跃度
+- 异常定位：400/404/500/数据库/Service 错误自动返回 Request ID、模块、Controller/Service/Mapper 与负责人
+- 监控台：请求日志详情链路、用户活跃、模块负责人、开发者责任视图
+
+演示账号：
+
+- 张三：`zhangsan / zhangsan-123456`
+- 李四：`lisi / lisi-123456`
 
 架构说明见 [docs/01-architecture.md](docs/01-architecture.md)。
+下一阶段见 [docs/02-roadmap.md](docs/02-roadmap.md)。
