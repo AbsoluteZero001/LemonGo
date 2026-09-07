@@ -1,0 +1,42 @@
+:root {
+  color: #1f2937;
+  background: #f3f5f7;
+  font-family:
+    Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --lg-green: #138a48;
+  --lg-green-soft: #e7f6ee;
+  --lg-yellow: #e9a23b;
+  --lg-danger: #d64545;
+  --border-subtle: #e4e7eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100vh;
+  margin: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.page-pane {
+  min-height: 460px;
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.page-pane .el-card__body {
+  min-height: 460px;
+}
+

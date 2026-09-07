@@ -1,0 +1,25 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs / runtime
+logs/
+*.log
+target/
+dist/
+.env
+
+# Frontend
+frontend/node_modules/
+frontend/.vite/
+frontend/coverage/
+
+# Local database files
+data/
+mysql-data/
+
