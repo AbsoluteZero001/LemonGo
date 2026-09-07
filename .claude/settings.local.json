@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//c/Program Files/Docker/Docker/**)",
+      "Bash(sc query *)",
+      "Bash(where docker *)",
+      "Bash(\"/c/Program Files/Docker/Docker/Docker Desktop.exe\")",
+      "Bash(echo \"launched, PID=$!\")"
+    ]
+  }
+}
