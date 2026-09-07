@@ -1,3 +1,7 @@
+CREATE DATABASE IF NOT EXISTS lemongo
+    DEFAULT CHARACTER SET utf8mb4
+    DEFAULT COLLATE utf8mb4_0900_ai_ci;
+
 USE lemongo;
 
 SET NAMES utf8mb4;
