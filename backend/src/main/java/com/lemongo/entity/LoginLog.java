@@ -18,5 +18,9 @@ public class LoginLog {
     private String userAgent;
     private Integer loginStatus;
     private String failReason;
+    private LocalDateTime lastActiveTime;
+    private LocalDateTime logoutTime;
+    private Integer activeSeconds;
+    private Integer sessionStatus;
     private LocalDateTime createdAt;
 }

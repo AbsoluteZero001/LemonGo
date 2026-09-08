@@ -21,6 +21,7 @@ LemonGo 是一个以**请求链路追踪与模块责任监控为核心**的模�
 - **异常定位**：异常由全局处理器统一处理，按当前请求的 method + 规范化路径定位 API、模块与负责人并写入 `error_log`；响应只暴露通用信息与 Request ID，堆栈详情仅在监控台查询。
 - **实时统计**：Redis 记录 5 分钟在线窗口、用户请求计数、API / 模块请求与错误计数，Redis 故障不会拖垮正常业务请求。
 - **历史统计**：请求结束后同步 upsert MySQL 日维度 `user_activity`、`api_statistics`、`module_statistics`，供监控台查询趋势和累计值。
+- **用户访问指标**：今日访问与累计访问按成功登录会话次数统计，活跃时长为页面停留会话时长；这类指标只在监控台展示。
 - **最小电商闭环**：登录注册、商品浏览与维护、购物车、下单与模拟支付、个人资料编辑，构成可真实操作、可产生观测数据的业务系统。
 - **三端角色入口**：前端划分为用户端、管理端、监控台；后端在 `AuthInterceptor` 中解析 JWT `role` 声明并按接口路径前缀校验角色，`/api/admin/**` 强制 `ADMIN`，`/api/monitor/**` 强制 `MONITOR`。
 - **内置模拟异常**：提供 400、404、500、数据库异常、Service 异常五类演示接口，用来验证异常落库与责任定位闭环。
@@ -263,8 +264,8 @@ npm run dev
 | 模块 | 方法与路径 | 说明 |
 | --- | --- | --- |
 | 健康检查 | `GET /api/health` | 服务健康检查 |
-| 认证 | `POST /api/auth/login` · `POST /api/auth/register` | 登录 / 注册 |
-| 用户 | `GET /api/users/me` · `PUT /api/users/me` · `GET /api/users/me/activity` | 当前用户、编辑资料、我的活跃度 |
+| 认证 | `POST /api/auth/login` · `/register` · `/logout` · `/heartbeat` | 登录 / 注册 / 退出 / 页面心跳 |
+| 用户 | `GET /api/users/me` · `PUT /api/users/me` | 当前用户、编辑资料 |
 | 商品 | `GET /api/products` · `GET /api/products/categories` · `GET /api/products/{id}` | 商品列表、分类、详情 |
 | 购物车 | `GET/POST /api/cart/items` · `PUT/DELETE /api/cart/items/{id}` | 列表、加入、改数量、移除 |
 | 订单 | `POST /api/orders` · `GET /api/orders` · `GET /api/orders/{id}` · `POST /api/orders/{id}/pay` | 下单、列表、详情、模拟支付 |

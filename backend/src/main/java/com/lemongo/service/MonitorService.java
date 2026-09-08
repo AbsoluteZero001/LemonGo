@@ -10,7 +10,6 @@ import com.lemongo.entity.SysApi;
 import com.lemongo.entity.SysDeveloper;
 import com.lemongo.entity.SysModule;
 import com.lemongo.entity.SysUser;
-import com.lemongo.entity.UserActivity;
 import com.lemongo.mapper.SysApiMapper;
 import com.lemongo.mapper.SysDeveloperMapper;
 import com.lemongo.mapper.SysModuleMapper;
@@ -18,9 +17,9 @@ import com.lemongo.mapper.SysUserMapper;
 import com.lemongo.observability.RedisObservationService;
 import com.lemongo.observability.mapper.ApiStatisticsMapper;
 import com.lemongo.observability.mapper.ErrorLogMapper;
+import com.lemongo.observability.mapper.LoginLogMapper;
 import com.lemongo.observability.mapper.ModuleStatisticsMapper;
 import com.lemongo.observability.mapper.RequestLogMapper;
-import com.lemongo.observability.mapper.UserActivityMapper;
 import com.lemongo.vo.ApiRegistryVo;
 import com.lemongo.vo.DashboardVo;
 import com.lemongo.vo.DeveloperMonitorVo;
@@ -54,7 +53,7 @@ public class MonitorService {
     private final ErrorLogMapper errorLogMapper;
     private final ApiStatisticsMapper apiStatisticsMapper;
     private final ModuleStatisticsMapper moduleStatisticsMapper;
-    private final UserActivityMapper userActivityMapper;
+    private final LoginLogMapper loginLogMapper;
     private final SysApiMapper apiMapper;
     private final SysDeveloperMapper developerMapper;
     private final SysModuleMapper moduleMapper;
@@ -141,11 +140,27 @@ public class MonitorService {
     public List<UserActivityVo> userActivity(LocalDate date) {
         LocalDate statDate = date == null ? LocalDate.now(ASIA_SHANGHAI) : date;
         List<SysUser> users = userMapper.selectList(null);
-        Map<Long, UserActivity> activityMap = userActivityMapper.selectList(
-                        new LambdaQueryWrapper<UserActivity>().eq(UserActivity::getStatDate, statDate))
+        Map<Long, Map<String, Object>> dailyVisits = loginLogMapper.selectDailyVisits(
+                        statDate.atStartOfDay(),
+                        statDate.plusDays(1).atStartOfDay())
                 .stream()
-                .collect(Collectors.toMap(UserActivity::getUserId, Function.identity()));
-        Map<Long, Map<String, Object>> cumulativeMap = userActivityMapper.selectCumulative(statDate)
+                .collect(Collectors.toMap(
+                        row -> ((Number) row.get("userId")).longValue(),
+                        Function.identity(),
+                        (a, b) -> a));
+        Map<Long, Map<String, Object>> totalVisits = loginLogMapper.selectTotalVisits()
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row.get("userId")).longValue(),
+                        Function.identity(),
+                        (a, b) -> a));
+        Map<Long, Map<String, Object>> activeSeconds = loginLogMapper.selectActiveSeconds()
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row.get("userId")).longValue(),
+                        Function.identity(),
+                        (a, b) -> a));
+        Map<Long, Map<String, Object>> lastLogout = loginLogMapper.selectLastLogout()
                 .stream()
                 .collect(Collectors.toMap(
                         row -> ((Number) row.get("userId")).longValue(),
@@ -155,26 +170,29 @@ public class MonitorService {
         Set<Long> onlineIds = currentDate ? redisObservationService.onlineUserIds() : Set.of();
         return users.stream()
                 .map(user -> {
-                    UserActivity activity = activityMap.get(user.getId());
-                    Map<String, Object> cumulative = cumulativeMap.get(user.getId());
+                    Map<String, Object> daily = dailyVisits.get(user.getId());
+                    Map<String, Object> total = totalVisits.get(user.getId());
+                    Map<String, Object> active = activeSeconds.get(user.getId());
+                    Map<String, Object> logout = lastLogout.get(user.getId());
                     return new UserActivityVo(
                             user.getId(),
                             user.getUsername(),
                             user.getNickname(),
                             user.getLastLoginTime(),
+                            logout == null ? null : dateTime(logout.get("lastLogoutTime")),
                             user.getLastActiveTime(),
-                            user.getLastVisitTime(),
-                            activity == null ? 0 : activity.getRequestCountToday(),
-                            cumulative == null ? 0 : number(cumulative.get("requestCount")).intValue(),
-                            activity == null ? 0 : activity.getActiveSecondsToday(),
-                            cumulative == null ? 0 : number(cumulative.get("activeSeconds")).intValue(),
+                            daily == null ? 0 : number(daily.get("visitCount")).intValue(),
+                            total == null ? 0 : number(total.get("visitCount")).intValue(),
+                            active == null ? 0 : number(active.get("activeSeconds")).intValue(),
                             user.getActivityScore() == null ? 0 : user.getActivityScore(),
                             currentDate
                                     ? (onlineIds.contains(user.getId()) ? 1 : 0)
-                                    : (activity == null || activity.getOnlineStatus() == null
-                                    ? 0 : activity.getOnlineStatus()));
+                                    : (user.getOnlineStatus() == null
+                                    ? 0 : user.getOnlineStatus()));
                 })
-                .sorted(Comparator.comparingInt(UserActivityVo::activityScore).reversed())
+                .sorted(Comparator.comparingInt(UserActivityVo::onlineStatus).reversed()
+                        .thenComparing(
+                                Comparator.comparingInt(UserActivityVo::totalVisits).reversed()))
                 .toList();
     }
 

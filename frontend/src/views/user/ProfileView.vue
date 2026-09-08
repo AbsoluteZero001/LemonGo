@@ -2,14 +2,12 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Clock, DataLine, EditPen, Message, Phone } from '@element-plus/icons-vue'
-import { fetchMeActivity, updateMe } from '@/api/system'
-import type { UserActivity } from '@/api/system'
+import { EditPen, Message, Phone } from '@element-plus/icons-vue'
+import { updateMe } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
-const activity = ref<UserActivity | null>(null)
 const loading = ref(false)
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -29,9 +27,7 @@ async function load() {
   loading.value = true
   try {
     await auth.refreshProfile()
-    activity.value = await fetchMeActivity()
   } catch {
-    activity.value = null
   } finally {
     loading.value = false
   }
@@ -65,16 +61,11 @@ async function saveProfile() {
     dialogVisible.value = false
     ElMessage.success('个人资料已更新')
     await auth.refreshProfile()
-    activity.value = await fetchMeActivity()
   } catch {
     // The shared HTTP interceptor has already shown the error.
   } finally {
     saving.value = false
   }
-}
-
-function formatTime(value?: string) {
-  return value || '暂无记录'
 }
 
 onMounted(load)
@@ -92,38 +83,11 @@ onMounted(load)
         <p>@{{ profile.username }} · {{ profile.email || '未填写邮箱' }}</p>
       </div>
       <div class="profile-actions">
-        <el-tag v-if="profile.activityScore >= 60" type="success" effect="dark" round>
-          活跃用户
-        </el-tag>
-        <el-tag v-else effect="plain" round>成长中</el-tag>
         <el-button type="primary" plain :icon="EditPen" @click="openEditor">
           编辑资料
         </el-button>
       </div>
       </section>
-
-      <div class="metric-grid">
-        <div class="metric-cell">
-          <span class="metric-label">活跃度</span>
-          <strong>{{ profile.activityScore }}</strong>
-          <el-icon color="var(--lg-green)"><DataLine /></el-icon>
-        </div>
-        <div class="metric-cell">
-          <span class="metric-label">今日访问</span>
-          <strong>{{ activity?.requestCountToday ?? 0 }}</strong>
-          <el-icon color="#5b6ee1"><DataLine /></el-icon>
-        </div>
-        <div class="metric-cell">
-          <span class="metric-label">累计访问</span>
-          <strong>{{ activity?.requestCountTotal ?? 0 }}</strong>
-          <el-icon color="#b7791f"><DataLine /></el-icon>
-        </div>
-        <div class="metric-cell">
-          <span class="metric-label">活跃时长</span>
-          <strong>{{ Math.round((activity?.activeSecondsTotal ?? 0) / 60) }}m</strong>
-          <el-icon color="#4b5563"><Clock /></el-icon>
-        </div>
-      </div>
 
       <section class="profile-detail">
         <div class="detail-row">
@@ -135,16 +99,6 @@ onMounted(load)
           <el-icon><Phone /></el-icon>
           <span>手机</span>
           <strong>{{ profile.phone || '-' }}</strong>
-        </div>
-        <div class="detail-row">
-          <el-icon><Clock /></el-icon>
-          <span>最近上线</span>
-          <strong>{{ formatTime(profile.lastLoginTime) }}</strong>
-        </div>
-        <div class="detail-row">
-          <el-icon><DataLine /></el-icon>
-          <span>最近活跃</span>
-          <strong>{{ formatTime(profile.lastActiveTime) }}</strong>
         </div>
       </section>
     </template>
@@ -220,41 +174,6 @@ onMounted(load)
   color: #6b7280;
 }
 
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-
-.metric-cell {
-  position: relative;
-  display: flex;
-  min-height: 112px;
-  flex-direction: column;
-  justify-content: center;
-  padding: 18px;
-  background: #fff;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-}
-
-.metric-cell .el-icon {
-  position: absolute;
-  right: 16px;
-  bottom: 14px;
-}
-
-.metric-label {
-  color: #6b7280;
-  font-size: 13px;
-}
-
-.metric-cell strong {
-  margin-top: 4px;
-  color: #111827;
-  font-size: 26px;
-}
-
 .profile-detail {
   background: #fff;
   border: 1px solid var(--border-subtle);
@@ -281,10 +200,6 @@ onMounted(load)
 }
 
 @media (max-width: 760px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .profile-hero {
     flex-wrap: wrap;
   }

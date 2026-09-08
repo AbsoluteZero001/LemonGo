@@ -4,7 +4,6 @@ import com.lemongo.common.api.Result;
 import com.lemongo.dto.ProfileUpdateRequest;
 import com.lemongo.service.UserService;
 import com.lemongo.vo.ProfileVo;
-import com.lemongo.vo.UserActivityVo;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,11 +22,6 @@ public class UserController {
     @GetMapping("/users/me")
     public Result<ProfileVo> me() {
         return Result.ok(userService.me());
-    }
-
-    @GetMapping("/users/me/activity")
-    public Result<UserActivityVo> meActivity() {
-        return Result.ok(userService.meActivity());
     }
 
     @PutMapping("/users/me")

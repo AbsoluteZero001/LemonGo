@@ -5,7 +5,7 @@ import { fetchUserActivity, fetchUserUsage } from '@/api/system'
 import type { UserActivity, UserRequestUsage } from '@/api/system'
 
 const loading = ref(false)
-const date = ref(new Date().toISOString().slice(0, 10))
+const date = ref(beijingDate())
 const rows = ref<UserActivity[]>([])
 const usageRows = ref<UserRequestUsage[]>([])
 const activeTab = ref('activity')
@@ -13,11 +13,11 @@ const activeTab = ref('activity')
 const onlineCount = computed(
   () => rows.value.filter((item) => item.onlineStatus === 1).length,
 )
-const requestCount = computed(() =>
-  rows.value.reduce((sum, item) => sum + item.requestCountToday, 0),
+const visitCount = computed(() =>
+  rows.value.reduce((sum, item) => sum + item.todayVisits, 0),
 )
 const activeSeconds = computed(() =>
-  rows.value.reduce((sum, item) => sum + item.activeSecondsToday, 0),
+  rows.value.reduce((sum, item) => sum + item.activeSecondsTotal, 0),
 )
 
 async function load() {
@@ -62,8 +62,12 @@ function usageDuration(ms: number) {
 }
 
 function changeDate(value: string) {
-  date.value = value || new Date().toISOString().slice(0, 10)
+  date.value = value || beijingDate()
   load()
+}
+
+function beijingDate() {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(new Date())
 }
 
 onMounted(load)
@@ -90,11 +94,11 @@ onMounted(load)
       </div>
       <div class="metric-cell">
         <span>当日访问</span>
-        <strong>{{ requestCount }}</strong>
+        <strong>{{ visitCount }}</strong>
         <el-icon color="#5b6ee1"><Timer /></el-icon>
       </div>
       <div class="metric-cell">
-        <span>累计活跃</span>
+        <span>累计活跃时长</span>
         <strong>{{ formatDuration(activeSeconds) }}</strong>
         <el-icon color="#b7791f"><Timer /></el-icon>
       </div>
@@ -103,7 +107,7 @@ onMounted(load)
     <div v-loading="loading" class="activity-panel">
       <el-tabs v-model="activeTab" class="activity-tabs">
         <el-tab-pane label="用户活跃" name="activity">
-          <el-table :data="rows" style="width: 100%" empty-text="当日暂无活跃记录">
+          <el-table :data="rows" style="width: 100%" empty-text="暂无登录访问记录">
             <el-table-column label="用户" min-width="160">
               <template #default="{ row }">
                 <div class="user-cell">
@@ -115,17 +119,20 @@ onMounted(load)
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="最近上线" width="180">
+            <el-table-column label="最后上线" width="175">
               <template #default="{ row }">{{ row.lastLoginTime || '-' }}</template>
             </el-table-column>
-            <el-table-column label="最近活跃" width="180">
+            <el-table-column label="最后退出" width="175">
+              <template #default="{ row }">{{ row.lastLogoutTime || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="最后在线" width="175">
               <template #default="{ row }">{{ row.lastActiveTime || '-' }}</template>
             </el-table-column>
             <el-table-column label="当日访问" width="110" align="right">
-              <template #default="{ row }">{{ row.requestCountToday }}</template>
+              <template #default="{ row }">{{ row.todayVisits }}</template>
             </el-table-column>
             <el-table-column label="累计访问" width="110" align="right">
-              <template #default="{ row }">{{ row.requestCountTotal }}</template>
+              <template #default="{ row }">{{ row.totalVisits }}</template>
             </el-table-column>
             <el-table-column label="活跃时长" width="120" align="right">
               <template #default="{ row }">

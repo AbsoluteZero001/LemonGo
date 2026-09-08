@@ -29,4 +29,20 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             @Param("nickname") String nickname,
             @Param("email") String email,
             @Param("phone") String phone);
+
+    @Update("""
+            UPDATE sys_user
+            SET online_status = 1,
+                last_visit_time = NOW(),
+                last_active_time = NOW()
+            WHERE id = #{userId}
+            """)
+    int touchPresence(@Param("userId") Long userId);
+
+    @Update("""
+            UPDATE sys_user
+            SET online_status = 0
+            WHERE id = #{userId}
+            """)
+    int markOffline(@Param("userId") Long userId);
 }

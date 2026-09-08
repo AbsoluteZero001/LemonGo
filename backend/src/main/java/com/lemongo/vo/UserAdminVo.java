@@ -15,6 +15,5 @@ public record UserAdminVo(
         LocalDateTime firstLoginTime,
         LocalDateTime lastLoginTime,
         LocalDateTime lastActiveTime,
-        Integer activityScore,
         LocalDateTime createdAt) {
 }

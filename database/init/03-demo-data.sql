@@ -36,6 +36,15 @@ VALUES
 -- 3. 下单结算后清空张三的购物车（与真实 OrderService 行为一致）
 DELETE FROM cart_item WHERE user_id = 1;
 
+-- 3.1 页面会话：张三从登录到最近一次退出共停留 20 分钟
+INSERT INTO login_log
+    (user_id, username, login_time, login_ip, user_agent, login_status,
+     last_active_time, logout_time, active_seconds, session_status, created_at)
+VALUES
+    (1, 'zhangsan', NOW() - INTERVAL 58 MINUTE, '127.0.0.1', 'seed-session',
+     1, NOW() - INTERVAL 38 MINUTE, NOW() - INTERVAL 38 MINUTE, 1200, 0,
+     NOW() - INTERVAL 58 MINUTE);
+
 -- 4. 请求日志：链路每一步各一条，时间/模块/负责人/控制器与 sys_api 注册表一致
 INSERT INTO request_log
     (request_id, user_id, username, request_time, client_ip, http_method, uri,

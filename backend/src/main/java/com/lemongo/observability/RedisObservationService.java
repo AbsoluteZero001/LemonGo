@@ -100,6 +100,13 @@ public class RedisObservationService {
         }
     }
 
+    public void removeUser(Long userId) {
+        runQuietly(() -> {
+            String date = DATE.format(LocalDateTime.now(ASIA_SHANGHAI));
+            redis.opsForZSet().remove("lemongo:online:" + date, String.valueOf(userId));
+        }, "user offline");
+    }
+
     private void increment(String key) {
         redis.opsForValue().increment(key);
         redis.expire(key, Duration.ofDays(2));

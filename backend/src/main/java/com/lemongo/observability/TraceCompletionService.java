@@ -46,6 +46,9 @@ public class TraceCompletionService {
         if (trace == null) {
             return;
         }
+        if ("/api/auth/heartbeat".equals(uri)) {
+            return;
+        }
 
         Responsibility responsibility = apiRegistry.resolve(httpMethod, uri);
         boolean success = httpStatus < 400;
@@ -78,7 +81,8 @@ public class TraceCompletionService {
         if (!success && !RequestContext.isErrorLogSaved()) {
             saveFallbackError(responsibility, httpStatus, requestId, trace, durationMs);
         }
-        if (RequestContext.userId() != null) {
+        boolean pagePresenceRequest = !"/api/auth/logout".equals(uri);
+        if (RequestContext.userId() != null && pagePresenceRequest) {
             userActivityMapper.addActivity(RequestContext.userId(), durationMs);
             sysUserMapper.touchActivity(RequestContext.userId());
             redisObservationService.recordUser(RequestContext.userId());

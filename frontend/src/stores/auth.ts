@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
-import { fetchMe, login as loginRequest, register as registerRequest } from '@/api/system'
+import {
+  fetchMe,
+  heartbeat as heartbeatRequest,
+  login as loginRequest,
+  logout as logoutRequest,
+  register as registerRequest,
+} from '@/api/system'
 import type { Profile } from '@/api/system'
 
 const TOKEN_KEY = 'lemongo_token'
@@ -48,11 +54,26 @@ export const useAuthStore = defineStore('auth', {
       this.profile = profile
       localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
     },
-    logout() {
+    async logout() {
+      try {
+        await logoutRequest()
+      } catch {
+        // Local credentials are still cleared so the user is not trapped.
+      }
       this.token = ''
       this.profile = null
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(PROFILE_KEY)
+    },
+    async heartbeat() {
+      if (!this.token) {
+        return
+      }
+      try {
+        await heartbeatRequest()
+      } catch {
+        // Heartbeat must never interrupt page interaction.
+      }
     },
   },
 })

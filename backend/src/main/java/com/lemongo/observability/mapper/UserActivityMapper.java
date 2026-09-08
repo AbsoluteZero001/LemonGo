@@ -2,12 +2,8 @@ package com.lemongo.observability.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.lemongo.entity.UserActivity;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 public interface UserActivityMapper extends BaseMapper<UserActivity> {
 
@@ -37,26 +33,4 @@ public interface UserActivityMapper extends BaseMapper<UserActivity> {
                 updated_at = NOW()
             """)
     void addActivity(@Param("userId") Long userId, @Param("durationMs") long durationMs);
-
-    @Select("""
-            SELECT user_id AS userId,
-                   COALESCE(SUM(request_count_today), 0) AS requestCount,
-                   COALESCE(SUM(active_seconds_today), 0) AS activeSeconds
-            FROM user_activity
-            WHERE stat_date <= #{statDate}
-            GROUP BY user_id
-            """)
-    List<Map<String, Object>> selectCumulative(@Param("statDate") LocalDate statDate);
-
-    @Select("""
-            SELECT user_id AS userId,
-                   COALESCE(SUM(request_count_today), 0) AS requestCount,
-                   COALESCE(SUM(active_seconds_today), 0) AS activeSeconds
-            FROM user_activity
-            WHERE user_id = #{userId} AND stat_date <= #{statDate}
-            GROUP BY user_id
-            """)
-    Map<String, Object> selectUserCumulative(
-            @Param("userId") Long userId,
-            @Param("statDate") LocalDate statDate);
 }

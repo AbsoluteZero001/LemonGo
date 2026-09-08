@@ -33,4 +33,16 @@ public class AuthController {
             HttpServletRequest httpRequest) {
         return Result.ok(authService.register(request, httpRequest));
     }
+
+    @PostMapping("/auth/heartbeat")
+    public Result<Void> heartbeat() {
+        authService.heartbeat();
+        return Result.ok();
+    }
+
+    @PostMapping("/auth/logout")
+    public Result<Void> logout() {
+        authService.logout();
+        return Result.ok();
+    }
 }

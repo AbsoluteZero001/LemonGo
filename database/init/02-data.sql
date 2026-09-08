@@ -41,7 +41,7 @@ VALUES
     (16, '/api/monitor/dashboard', 'GET', 5, 'MonitorController', 'dashboard', 'MonitorService.dashboard', NULL, '监控首页指标', 10003),
     (17, '/api/monitor/request-logs', 'GET', 5, 'MonitorController', 'requestLogs', 'MonitorService.requestLogs', 'RequestLogMapper', '请求日志', 10003),
     (18, '/api/monitor/request-logs/{requestId}', 'GET', 5, 'MonitorController', 'requestDetail', 'MonitorService.requestDetail', 'RequestLogMapper', '请求详情', 10003),
-    (19, '/api/monitor/users/activity', 'GET', 5, 'MonitorController', 'userActivity', 'MonitorService.userActivity', 'UserActivityMapper', '用户活跃度', 10003),
+    (19, '/api/monitor/users/activity', 'GET', 5, 'MonitorController', 'userActivity', 'MonitorService.userActivity', 'LoginLogMapper', '用户登录会话统计', 10003),
     (20, '/api/monitor/modules', 'GET', 5, 'MonitorController', 'modules', 'MonitorService.modules', 'ModuleStatisticsMapper', '模块责任监控', 10003),
     (21, '/api/test/error/400', 'GET', 5, 'TestErrorController', 'badRequest', NULL, NULL, '模拟 400', 10003),
     (22, '/api/test/error/404', 'GET', 5, 'TestErrorController', 'notFound', NULL, NULL, '模拟 404', 10003),
@@ -52,7 +52,6 @@ VALUES
     (27, '/api/monitor/developers', 'GET', 5, 'MonitorController', 'developers', 'MonitorService.developers', NULL, '开发者监控', 10003),
     (28, '/api/monitor/apis', 'GET', 5, 'MonitorController', 'apis', 'MonitorService.apis', 'SysApiMapper', '接口注册表', 10003),
     (29, '/api/monitor/errors', 'GET', 5, 'MonitorController', 'errors', 'MonitorService.errors', 'ErrorLogMapper', '异常日志', 10003),
-    (30, '/api/users/me/activity', 'GET', 1, 'UserController', 'meActivity', 'UserService.meActivity', 'UserActivityMapper', '我的活跃度', 10001),
     (31, '/api/products/categories', 'GET', 2, 'ProductController', 'categories', 'ProductService.categories', 'ProductMapper', '商品分类', 10002),
     (32, '/api/admin/products', 'GET', 2, 'AdminProductController', 'list', 'ProductService.adminList', 'ProductMapper', '管理端商品列表', 10002),
     (33, '/api/admin/products', 'POST', 2, 'AdminProductController', 'create', 'ProductService.create', 'ProductMapper', '管理端新增商品', 10002),
@@ -79,7 +78,9 @@ VALUES
     (54, '/api/admin/apis/refresh', 'POST', 6, 'AdminApiController', 'refresh', 'ApiAdminService.refresh', 'SysApiMapper', '刷新注册表', 10003),
     (55, '/api/auth/register', 'POST', 1, 'AuthController', 'register', 'AuthService.register', 'UserMapper', '用户注册', 10001),
     (56, '/api/users/me', 'PUT', 1, 'UserController', 'updateMe', 'UserService.updateMe', 'SysUserMapper', '用户端修改个人资料', 10001),
-    (57, '/api/monitor/users/usage', 'GET', 5, 'MonitorController', 'userUsage', 'MonitorService.userUsage', 'RequestLogMapper', '按用户查看接口调用明细', 10003);
+    (57, '/api/monitor/users/usage', 'GET', 5, 'MonitorController', 'userUsage', 'MonitorService.userUsage', 'RequestLogMapper', '按用户查看接口调用明细', 10003),
+    (58, '/api/auth/heartbeat', 'POST', 1, 'AuthController', 'heartbeat', 'AuthService.heartbeat', NULL, '页面停留心跳', 10001),
+    (59, '/api/auth/logout', 'POST', 1, 'AuthController', 'logout', 'AuthService.logout', NULL, '退出登录', 10001);
 
 -- Seed users use a salted hash design that will be finalized together with JWT login.
 -- role: USER = 用户端, ADMIN = 管理端, MONITOR = 监控台.

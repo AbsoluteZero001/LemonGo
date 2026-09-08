@@ -1,17 +1,69 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { useRouter } from 'vue-router'
-import { SwitchButton } from '@element-plus/icons-vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Clock, SwitchButton } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const currentTitle = computed(() => String(route.meta.title ?? 'LemonGo'))
+const now = ref(new Date())
+let clockTimer: ReturnType<typeof setInterval> | undefined
+let heartbeatTimer: ReturnType<typeof setInterval> | undefined
+
+const beijingTime = computed(() =>
+  new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(now.value),
+)
+
+function sendHeartbeat() {
+  if (auth.isLoggedIn && document.visibilityState === 'visible') {
+    void auth.heartbeat()
+  }
+}
+
+function handleVisibility() {
+  if (document.visibilityState === 'visible') {
+    sendHeartbeat()
+  }
+}
+
+watch(
+  () => auth.isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn) {
+      sendHeartbeat()
+    }
+  },
+)
 
 onMounted(() => {
   auth.refreshProfile().catch(() => undefined)
+  sendHeartbeat()
+  clockTimer = setInterval(() => {
+    now.value = new Date()
+  }, 1000)
+  heartbeatTimer = setInterval(sendHeartbeat, 15_000)
+  document.addEventListener('visibilitychange', handleVisibility)
+})
+
+onBeforeUnmount(() => {
+  if (clockTimer) {
+    clearInterval(clockTimer)
+  }
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer)
+  }
+  document.removeEventListener('visibilitychange', handleVisibility)
 })
 
 const userMenu = [
@@ -50,8 +102,8 @@ const roleLabel = computed(() => {
   return '用户端'
 })
 
-function logout() {
-  auth.logout()
+async function logout() {
+  await auth.logout()
   router.push('/login')
 }
 </script>
@@ -95,18 +147,25 @@ function logout() {
       <el-header class="app-header">
         <div class="header-inner">
           <span class="page-title">{{ currentTitle }}</span>
-          <div v-if="auth.profile" class="user-box">
-            <el-tag effect="plain" round class="role-tag">{{ roleLabel }}</el-tag>
-            <el-tag effect="plain" round class="user-tag">
-              {{ auth.profile.nickname }} · 活跃度 {{ auth.profile.activityScore }}
-            </el-tag>
-            <el-button text circle aria-label="退出登录" @click="logout">
-              <el-icon><SwitchButton /></el-icon>
+          <div class="header-right">
+            <div class="beijing-clock" aria-label="北京时间">
+              <el-icon><Clock /></el-icon>
+              <span>北京时间</span>
+              <b>{{ beijingTime }}</b>
+            </div>
+            <div v-if="auth.profile" class="user-box">
+              <el-tag effect="plain" round class="role-tag">{{ roleLabel }}</el-tag>
+              <el-tag effect="plain" round class="user-tag">
+                {{ auth.profile.nickname }}
+              </el-tag>
+              <el-button text circle aria-label="退出登录" @click="logout">
+                <el-icon><SwitchButton /></el-icon>
+              </el-button>
+            </div>
+            <el-button v-else type="primary" plain @click="router.push('/login')">
+              登录
             </el-button>
           </div>
-          <el-button v-else type="primary" plain @click="router.push('/login')">
-            登录
-          </el-button>
         </div>
       </el-header>
       <el-main class="app-main">
@@ -200,6 +259,27 @@ function logout() {
   width: 100%;
   align-items: center;
   justify-content: space-between;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.beijing-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.beijing-clock b {
+  color: #111827;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-weight: 500;
 }
 
 .user-box {

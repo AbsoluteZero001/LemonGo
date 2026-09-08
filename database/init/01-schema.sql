@@ -202,9 +202,14 @@ CREATE TABLE IF NOT EXISTS login_log (
     user_agent VARCHAR(500) DEFAULT NULL,
     login_status TINYINT NOT NULL COMMENT '1 success, 0 fail',
     fail_reason VARCHAR(255) DEFAULT NULL,
+    last_active_time DATETIME(3) DEFAULT NULL,
+    logout_time DATETIME(3) DEFAULT NULL,
+    active_seconds INT NOT NULL DEFAULT 0,
+    session_status TINYINT NOT NULL DEFAULT 0 COMMENT '1 active, 0 closed',
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     PRIMARY KEY (id),
     KEY idx_login_user_time (user_id, login_time),
+    KEY idx_login_session (user_id, session_status),
     KEY idx_login_time (login_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='login logs';
 

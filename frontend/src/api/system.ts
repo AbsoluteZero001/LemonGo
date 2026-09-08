@@ -15,9 +15,6 @@ export interface Profile {
   email?: string
   phone?: string
   avatarUrl?: string
-  lastLoginTime?: string
-  lastActiveTime?: string
-  activityScore: number
 }
 
 export interface LoginResult {
@@ -149,11 +146,10 @@ export interface UserActivity {
   username: string
   nickname: string
   lastLoginTime?: string
+  lastLogoutTime?: string
   lastActiveTime?: string
-  lastVisitTime?: string
-  requestCountToday: number
-  requestCountTotal: number
-  activeSecondsToday: number
+  todayVisits: number
+  totalVisits: number
   activeSecondsTotal: number
   activityScore: number
   onlineStatus: number
@@ -244,7 +240,6 @@ export interface UserAdmin {
   firstLoginTime?: string
   lastLoginTime?: string
   lastActiveTime?: string
-  activityScore: number
   createdAt?: string
 }
 
@@ -302,6 +297,14 @@ export function fetchHealth() {
 
 export function login(username: string, password: string) {
   return post<LoginResult>('/auth/login', { username, password })
+}
+
+export function logout() {
+  return post<void>('/auth/logout', {})
+}
+
+export function heartbeat() {
+  return post<void>('/auth/heartbeat', {})
 }
 
 export function register(username: string, password: string, nickname?: string) {
@@ -401,10 +404,6 @@ export function simulateError(path: string) {
 
 export function fetchCategories() {
   return get<string[]>('/products/categories')
-}
-
-export function fetchMeActivity() {
-  return get<UserActivity>('/users/me/activity')
 }
 
 export function fetchApiRegistry() {

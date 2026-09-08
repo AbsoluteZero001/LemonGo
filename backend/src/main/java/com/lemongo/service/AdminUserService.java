@@ -101,7 +101,6 @@ public class AdminUserService {
                 user.getFirstLoginTime(),
                 user.getLastLoginTime(),
                 user.getLastActiveTime(),
-                user.getActivityScore(),
                 user.getCreatedAt());
     }
 }

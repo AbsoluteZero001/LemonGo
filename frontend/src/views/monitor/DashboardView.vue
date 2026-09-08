@@ -117,7 +117,7 @@ onBeforeUnmount(() => {
         <el-icon color="var(--lg-green)"><Connection /></el-icon>
       </div>
       <div class="metric-cell">
-        <span class="metric-label">今日访问</span>
+        <span class="metric-label">今日请求</span>
         <strong>{{ dashboard?.todayRequests ?? 0 }}</strong>
         <el-icon color="#5b6ee1"><CircleCheck /></el-icon>
       </div>
