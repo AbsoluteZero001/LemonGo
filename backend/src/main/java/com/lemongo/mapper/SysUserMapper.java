@@ -15,4 +15,18 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             WHERE id = #{userId}
             """)
     int touchActivity(@Param("userId") Long userId);
+
+    @Update("""
+            UPDATE sys_user
+            SET nickname = #{nickname},
+                email = #{email},
+                phone = #{phone},
+                updated_at = NOW()
+            WHERE id = #{userId}
+            """)
+    int updateProfile(
+            @Param("userId") Long userId,
+            @Param("nickname") String nickname,
+            @Param("email") String email,
+            @Param("phone") String phone);
 }

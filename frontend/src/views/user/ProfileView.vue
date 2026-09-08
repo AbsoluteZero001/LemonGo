@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Clock, DataLine, Message, Phone } from '@element-plus/icons-vue'
-import { fetchMeActivity } from '@/api/system'
+import { ElMessage } from 'element-plus'
+import { Clock, DataLine, EditPen, Message, Phone } from '@element-plus/icons-vue'
+import { fetchMeActivity, updateMe } from '@/api/system'
 import type { UserActivity } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
 
@@ -10,6 +11,13 @@ const router = useRouter()
 const auth = useAuthStore()
 const activity = ref<UserActivity | null>(null)
 const loading = ref(false)
+const dialogVisible = ref(false)
+const saving = ref(false)
+const form = reactive({
+  nickname: '',
+  email: '',
+  phone: '',
+})
 
 const profile = computed(() => auth.profile)
 
@@ -29,6 +37,42 @@ async function load() {
   }
 }
 
+function openEditor() {
+  if (!profile.value) {
+    return
+  }
+  form.nickname = profile.value.nickname
+  form.email = profile.value.email ?? ''
+  form.phone = profile.value.phone ?? ''
+  dialogVisible.value = true
+}
+
+async function saveProfile() {
+  const nickname = form.nickname.trim()
+  const email = form.email.trim()
+  const phone = form.phone.trim()
+  if (!nickname) {
+    ElMessage.error('昵称不能为空')
+    return
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    ElMessage.error('邮箱格式不正确')
+    return
+  }
+  saving.value = true
+  try {
+    await updateMe(nickname, email, phone)
+    dialogVisible.value = false
+    ElMessage.success('个人资料已更新')
+    await auth.refreshProfile()
+    activity.value = await fetchMeActivity()
+  } catch {
+    // The shared HTTP interceptor has already shown the error.
+  } finally {
+    saving.value = false
+  }
+}
+
 function formatTime(value?: string) {
   return value || '暂无记录'
 }
@@ -43,14 +87,19 @@ onMounted(load)
         <el-avatar :size="78" class="profile-avatar">
           {{ profile.nickname.slice(0, 1) }}
         </el-avatar>
-        <div class="profile-identity">
-          <h1>{{ profile.nickname }}</h1>
-          <p>@{{ profile.username }} · {{ profile.email || '未填写邮箱' }}</p>
-        </div>
+      <div class="profile-identity">
+        <h1>{{ profile.nickname }}</h1>
+        <p>@{{ profile.username }} · {{ profile.email || '未填写邮箱' }}</p>
+      </div>
+      <div class="profile-actions">
         <el-tag v-if="profile.activityScore >= 60" type="success" effect="dark" round>
           活跃用户
         </el-tag>
         <el-tag v-else effect="plain" round>成长中</el-tag>
+        <el-button type="primary" plain :icon="EditPen" @click="openEditor">
+          编辑资料
+        </el-button>
+      </div>
       </section>
 
       <div class="metric-grid">
@@ -99,6 +148,29 @@ onMounted(load)
         </div>
       </section>
     </template>
+
+    <el-dialog
+      v-model="dialogVisible"
+      title="编辑个人资料"
+      width="min(440px, 92vw)"
+      :close-on-click-modal="false"
+    >
+      <el-form label-position="top" @submit.prevent="saveProfile">
+        <el-form-item label="昵称">
+          <el-input v-model="form.nickname" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="form.email" maxlength="100" placeholder="选填" />
+        </el-form-item>
+        <el-form-item label="手机">
+          <el-input v-model="form.phone" maxlength="30" placeholder="选填" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="saveProfile">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -129,6 +201,12 @@ onMounted(load)
 .profile-identity {
   flex: 1;
   min-width: 0;
+}
+
+.profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .profile-identity h1 {
@@ -205,6 +283,15 @@ onMounted(load)
 @media (max-width: 760px) {
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-hero {
+    flex-wrap: wrap;
+  }
+
+  .profile-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

@@ -10,6 +10,7 @@ public record ErrorLogVo(
         String moduleName,
         Long developerId,
         String developerName,
+        String username,
         Integer errorCode,
         String errorType,
         String errorMessage,

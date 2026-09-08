@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -73,14 +75,28 @@ public class RedisObservationService {
 
     public Long onlineUserCount() {
         try {
-            String date = DATE.format(LocalDateTime.now(ASIA_SHANGHAI));
-            long from = LocalDateTime.now(ASIA_SHANGHAI).minusMinutes(5)
-                    .atZone(ASIA_SHANGHAI).toEpochSecond();
-            long to = LocalDateTime.now(ASIA_SHANGHAI).atZone(ASIA_SHANGHAI).toEpochSecond();
-            Long count = redis.opsForZSet().count("lemongo:online:" + date, from, to);
+            long[] range = onlineWindow();
+            Long count = redis.opsForZSet()
+                    .count("lemongo:online:" + DATE.format(LocalDateTime.now(ASIA_SHANGHAI)),
+                            range[0], range[1]);
             return count == null ? 0L : count;
         } catch (RedisConnectionFailureException ex) {
             return 0L;
+        }
+    }
+
+    public Set<Long> onlineUserIds() {
+        try {
+            long[] range = onlineWindow();
+            Set<String> members = redis.opsForZSet()
+                    .rangeByScore("lemongo:online:" + DATE.format(LocalDateTime.now(ASIA_SHANGHAI)),
+                            range[0], range[1]);
+            if (members == null) {
+                return Set.of();
+            }
+            return members.stream().map(Long::valueOf).collect(Collectors.toSet());
+        } catch (RedisConnectionFailureException ex) {
+            return Set.of();
         }
     }
 
@@ -95,5 +111,13 @@ public class RedisObservationService {
         } catch (RedisConnectionFailureException ex) {
             log.debug("Redis unavailable while {}", operation);
         }
+    }
+
+    private long[] onlineWindow() {
+        LocalDateTime now = LocalDateTime.now(ASIA_SHANGHAI);
+        return new long[]{
+                now.minusMinutes(5).atZone(ASIA_SHANGHAI).toEpochSecond(),
+                now.atZone(ASIA_SHANGHAI).toEpochSecond()
+        };
     }
 }

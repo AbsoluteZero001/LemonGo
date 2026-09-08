@@ -11,6 +11,7 @@ import com.lemongo.vo.ErrorLogVo;
 import com.lemongo.vo.ModuleMonitorVo;
 import com.lemongo.vo.RequestDetailVo;
 import com.lemongo.vo.UserActivityVo;
+import com.lemongo.vo.UserRequestUsageVo;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,13 @@ public class MonitorController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return Result.ok(monitorService.userActivity(date));
+    }
+
+    @GetMapping("/users/usage")
+    public Result<List<UserRequestUsageVo>> userUsage(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return Result.ok(monitorService.userUsage(date));
     }
 
     @GetMapping("/modules")

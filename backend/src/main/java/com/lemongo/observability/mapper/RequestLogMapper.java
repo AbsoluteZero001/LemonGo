@@ -34,4 +34,26 @@ public interface RequestLogMapper extends BaseMapper<RequestLog> {
             """)
     List<Map<String, Object>> selectDeveloperStats(
             @Param("startTime") LocalDateTime startTime);
+
+    @Select("""
+            SELECT user_id AS userId,
+                   username AS username,
+                   http_method AS httpMethod,
+                   uri AS uri,
+                   module_name AS moduleName,
+                   developer_name AS developerName,
+                   COUNT(*) AS requestCount,
+                   COALESCE(SUM(http_status >= 400), 0) AS errorCount,
+                   COALESCE(SUM(duration_ms), 0) AS totalDurationMs,
+                   MAX(request_time) AS lastRequestTime
+            FROM request_log
+            WHERE user_id IS NOT NULL
+              AND request_time >= #{startTime}
+              AND request_time < #{endTime}
+            GROUP BY user_id, username, http_method, uri, module_name, developer_name
+            ORDER BY requestCount DESC, MAX(request_time) DESC
+            """)
+    List<Map<String, Object>> selectUserUsage(
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime);
 }

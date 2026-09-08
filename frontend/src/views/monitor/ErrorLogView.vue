@@ -81,6 +81,9 @@ onMounted(load)
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="occurredAt" label="发生时间" width="175" />
         <el-table-column prop="requestId" label="Request ID" min-width="150" />
+        <el-table-column label="用户" width="110">
+          <template #default="{ row }">{{ row.username || '-' }}</template>
+        </el-table-column>
         <el-table-column prop="moduleName" label="模块" width="120" />
         <el-table-column prop="developerName" label="负责人" width="100" />
         <el-table-column label="错误码" width="90">
@@ -111,10 +114,14 @@ onMounted(load)
     <el-dialog v-model="detailVisible" title="异常详情" width="640px">
       <template v-if="current">
         <div class="detail-grid">
-          <div class="detail-item">
-            <span class="label">Request ID</span>
-            <span class="value mono">{{ current.requestId }}</span>
-          </div>
+            <div class="detail-item">
+              <span class="label">Request ID</span>
+              <span class="value mono">{{ current.requestId }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="label">用户</span>
+              <span class="value">{{ current.username || '-' }}</span>
+            </div>
           <div class="detail-item">
             <span class="label">错误码</span>
             <span class="value">{{ current.errorCode }}</span>

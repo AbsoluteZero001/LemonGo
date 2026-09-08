@@ -77,7 +77,9 @@ VALUES
     (52, '/api/admin/apis/{id}', 'PUT', 6, 'AdminApiController', 'update', 'ApiAdminService.update', 'SysApiMapper', '更新接口', 10003),
     (53, '/api/admin/apis/{id}', 'DELETE', 6, 'AdminApiController', 'delete', 'ApiAdminService.delete', 'SysApiMapper', '删除接口', 10003),
     (54, '/api/admin/apis/refresh', 'POST', 6, 'AdminApiController', 'refresh', 'ApiAdminService.refresh', 'SysApiMapper', '刷新注册表', 10003),
-    (55, '/api/auth/register', 'POST', 1, 'AuthController', 'register', 'AuthService.register', 'UserMapper', '用户注册', 10001);
+    (55, '/api/auth/register', 'POST', 1, 'AuthController', 'register', 'AuthService.register', 'UserMapper', '用户注册', 10001),
+    (56, '/api/users/me', 'PUT', 1, 'UserController', 'updateMe', 'UserService.updateMe', 'SysUserMapper', '用户端修改个人资料', 10001),
+    (57, '/api/monitor/users/usage', 'GET', 5, 'MonitorController', 'userUsage', 'MonitorService.userUsage', 'RequestLogMapper', '按用户查看接口调用明细', 10003);
 
 -- Seed users use a salted hash design that will be finalized together with JWT login.
 -- role: USER = 用户端, ADMIN = 管理端, MONITOR = 监控台.

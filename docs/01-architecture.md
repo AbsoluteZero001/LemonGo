@@ -32,7 +32,7 @@ Response（携带 Request ID）
 请求日志落库 + Redis 实时计数 + 用户活跃度更新
     |
     v
-定时任务将 Redis 统计快照持久化到 MySQL
+MySQL 日维度活跃度与 API/模块统计同步更新
 ```
 
 ## 3. 架构原则
@@ -116,7 +116,7 @@ module:request_count:{moduleId}
 module:error_count:{moduleId}
 ```
 
-当日计数附带自然日过期；定时任务以小时或分钟粒度把增量快照落到 MySQL。
+当日计数附带自然日过期；请求日志与 MySQL 日维度统计在每次请求结束时同步落库。
 
 ## 8. 异常响应设计
 

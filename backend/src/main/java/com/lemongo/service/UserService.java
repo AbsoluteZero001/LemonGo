@@ -3,6 +3,7 @@ package com.lemongo.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lemongo.common.api.ResultCode;
 import com.lemongo.common.context.RequestContext;
+import com.lemongo.dto.ProfileUpdateRequest;
 import com.lemongo.entity.SysUser;
 import com.lemongo.entity.UserActivity;
 import com.lemongo.exception.BusinessException;
@@ -12,6 +13,7 @@ import com.lemongo.vo.ProfileVo;
 import com.lemongo.vo.UserActivityVo;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,12 +28,28 @@ public class UserService {
         return AuthService.toProfile(requireUser());
     }
 
+    public ProfileVo updateMe(ProfileUpdateRequest request) {
+        SysUser user = requireUser();
+        userMapper.updateProfile(
+                user.getId(),
+                request.nickname().trim(),
+                blankToNull(request.email()),
+                blankToNull(request.phone()));
+        user.setNickname(request.nickname().trim());
+        user.setEmail(blankToNull(request.email()));
+        user.setPhone(blankToNull(request.phone()));
+        return AuthService.toProfile(user);
+    }
+
     public UserActivityVo meActivity() {
         SysUser user = requireUser();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Shanghai"));
         UserActivity activity = userActivityMapper.selectOne(
                 new LambdaQueryWrapper<UserActivity>()
                         .eq(UserActivity::getUserId, user.getId())
-                        .eq(UserActivity::getStatDate, LocalDate.now(ZoneId.of("Asia/Shanghai"))));
+                        .eq(UserActivity::getStatDate, today));
+        Map<String, Object> cumulative =
+                userActivityMapper.selectUserCumulative(user.getId(), today);
         return new UserActivityVo(
                 user.getId(),
                 user.getUsername(),
@@ -40,9 +58,9 @@ public class UserService {
                 user.getLastActiveTime(),
                 user.getLastVisitTime(),
                 activity == null ? 0 : activity.getRequestCountToday(),
-                activity == null ? 0 : activity.getRequestCountTotal(),
+                cumulative == null ? 0 : ((Number) cumulative.get("requestCount")).intValue(),
                 activity == null ? 0 : activity.getActiveSecondsToday(),
-                activity == null ? 0 : activity.getActiveSecondsTotal(),
+                cumulative == null ? 0 : ((Number) cumulative.get("activeSeconds")).intValue(),
                 user.getActivityScore() == null ? 0 : user.getActivityScore(),
                 user.getOnlineStatus() == null ? 0 : user.getOnlineStatus());
     }
@@ -57,5 +75,9 @@ public class UserService {
             throw new BusinessException(ResultCode.NOT_FOUND.getCode(), "用户不存在");
         }
         return user;
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

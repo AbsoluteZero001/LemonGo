@@ -28,6 +28,7 @@ import com.lemongo.vo.ErrorLogVo;
 import com.lemongo.vo.ModuleMonitorVo;
 import com.lemongo.vo.RequestDetailVo;
 import com.lemongo.vo.UserActivityVo;
+import com.lemongo.vo.UserRequestUsageVo;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -36,6 +37,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -143,9 +145,18 @@ public class MonitorService {
                         new LambdaQueryWrapper<UserActivity>().eq(UserActivity::getStatDate, statDate))
                 .stream()
                 .collect(Collectors.toMap(UserActivity::getUserId, Function.identity()));
+        Map<Long, Map<String, Object>> cumulativeMap = userActivityMapper.selectCumulative(statDate)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row.get("userId")).longValue(),
+                        Function.identity(),
+                        (a, b) -> a));
+        boolean currentDate = statDate.equals(LocalDate.now(ASIA_SHANGHAI));
+        Set<Long> onlineIds = currentDate ? redisObservationService.onlineUserIds() : Set.of();
         return users.stream()
                 .map(user -> {
                     UserActivity activity = activityMap.get(user.getId());
+                    Map<String, Object> cumulative = cumulativeMap.get(user.getId());
                     return new UserActivityVo(
                             user.getId(),
                             user.getUsername(),
@@ -154,13 +165,36 @@ public class MonitorService {
                             user.getLastActiveTime(),
                             user.getLastVisitTime(),
                             activity == null ? 0 : activity.getRequestCountToday(),
-                            activity == null ? 0 : activity.getRequestCountTotal(),
+                            cumulative == null ? 0 : number(cumulative.get("requestCount")).intValue(),
                             activity == null ? 0 : activity.getActiveSecondsToday(),
-                            activity == null ? 0 : activity.getActiveSecondsTotal(),
+                            cumulative == null ? 0 : number(cumulative.get("activeSeconds")).intValue(),
                             user.getActivityScore() == null ? 0 : user.getActivityScore(),
-                            user.getOnlineStatus() == null ? 0 : user.getOnlineStatus());
+                            currentDate
+                                    ? (onlineIds.contains(user.getId()) ? 1 : 0)
+                                    : (activity == null || activity.getOnlineStatus() == null
+                                    ? 0 : activity.getOnlineStatus()));
                 })
                 .sorted(Comparator.comparingInt(UserActivityVo::activityScore).reversed())
+                .toList();
+    }
+
+    public List<UserRequestUsageVo> userUsage(LocalDate date) {
+        LocalDate statDate = date == null ? LocalDate.now(ASIA_SHANGHAI) : date;
+        return requestLogMapper.selectUserUsage(
+                        statDate.atStartOfDay(),
+                        statDate.plusDays(1).atStartOfDay())
+                .stream()
+                .map(row -> new UserRequestUsageVo(
+                        number(row.get("userId")).longValue(),
+                        text(row.get("username")),
+                        text(row.get("httpMethod")),
+                        text(row.get("uri")),
+                        text(row.get("moduleName")),
+                        text(row.get("developerName")),
+                        number(row.get("requestCount")).longValue(),
+                        number(row.get("errorCount")).longValue(),
+                        number(row.get("totalDurationMs")).longValue(),
+                        dateTime(row.get("lastRequestTime"))))
                 .toList();
     }
 
@@ -277,12 +311,27 @@ public class MonitorService {
                 .collect(Collectors.toMap(SysModule::getId, Function.identity()));
         Map<Long, SysDeveloper> developers = developerMapper.selectList(null).stream()
                 .collect(Collectors.toMap(SysDeveloper::getId, Function.identity()));
+        List<String> requestIds = errorPage.getRecords().stream()
+                .map(ErrorLog::getRequestId)
+                .distinct()
+                .toList();
+        Map<String, RequestLog> requestLogMap = requestIds.isEmpty()
+                ? Map.of()
+                : requestLogMapper.selectList(
+                                new LambdaQueryWrapper<RequestLog>()
+                                        .in(RequestLog::getRequestId, requestIds))
+                        .stream()
+                        .collect(Collectors.toMap(
+                                RequestLog::getRequestId,
+                                Function.identity(),
+                                (a, b) -> a));
         Page<ErrorLogVo> result = new Page<>(errorPage.getCurrent(), errorPage.getSize());
         result.setTotal(errorPage.getTotal());
         result.setRecords(errorPage.getRecords().stream()
                 .map(error -> {
                     SysModule module = modules.get(error.getModuleId());
                     SysDeveloper developer = developers.get(error.getDeveloperId());
+                    RequestLog requestLog = requestLogMap.get(error.getRequestId());
                     return new ErrorLogVo(
                             error.getId(),
                             error.getRequestId(),
@@ -291,6 +340,7 @@ public class MonitorService {
                             module == null ? null : module.getModuleName(),
                             error.getDeveloperId(),
                             developer == null ? null : developer.getName(),
+                            requestLog == null ? null : requestLog.getUsername(),
                             error.getErrorCode(),
                             error.getErrorType(),
                             error.getErrorMessage(),
@@ -370,5 +420,23 @@ public class MonitorService {
                         stat.getRequestCount() == null || stat.getRequestCount() == 0
                                 ? 0 : stat.getTotalDurationMs() / stat.getRequestCount()))
                 .toList();
+    }
+
+    private Number number(Object value) {
+        return value == null ? 0 : (Number) value;
+    }
+
+    private String text(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private LocalDateTime dateTime(Object value) {
+        if (value instanceof LocalDateTime dateTime) {
+            return dateTime;
+        }
+        if (value instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime();
+        }
+        return null;
     }
 }

@@ -159,6 +159,19 @@ export interface UserActivity {
   onlineStatus: number
 }
 
+export interface UserRequestUsage {
+  userId: number
+  username?: string
+  httpMethod: string
+  uri: string
+  moduleName?: string
+  developerName?: string
+  requestCount: number
+  errorCount: number
+  totalDurationMs: number
+  lastRequestTime?: string
+}
+
 export interface ModuleMonitor {
   moduleId: number
   moduleName: string
@@ -209,6 +222,7 @@ export interface ErrorLogRow {
   moduleName: string
   developerId: number
   developerName: string
+  username?: string
   errorCode: number
   errorType?: string
   errorMessage?: string
@@ -302,6 +316,14 @@ export function fetchMe() {
   return get<Profile>('/users/me')
 }
 
+export function updateMe(nickname: string, email?: string, phone?: string) {
+  return put<Profile>('/users/me', {
+    nickname,
+    email: email?.trim() || '',
+    phone: phone?.trim() || '',
+  })
+}
+
 export function fetchProducts(params?: Record<string, unknown>) {
   return get<PageResult<Product>>('/products', params)
 }
@@ -359,6 +381,10 @@ export function fetchRequestDetail(requestId: string) {
 
 export function fetchUserActivity(date?: string) {
   return get<UserActivity[]>('/monitor/users/activity', date ? { date } : {})
+}
+
+export function fetchUserUsage(date?: string) {
+  return get<UserRequestUsage[]>('/monitor/users/usage', date ? { date } : {})
 }
 
 export function fetchModules() {
