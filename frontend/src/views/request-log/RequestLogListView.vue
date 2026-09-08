@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Connection, Refresh, Search } from '@element-plus/icons-vue'
+import { subscribeRealtime } from '@/api/realtime'
 import { fetchRequestLogs } from '@/api/system'
 import type { RequestLogRow } from '@/api/system'
 
@@ -13,6 +14,7 @@ const page = ref(1)
 const requestId = ref('')
 const uri = ref('')
 const status = ref('all')
+let unsubscribe: (() => void) | undefined
 
 async function load() {
   loading.value = true
@@ -42,6 +44,23 @@ async function load() {
   }
 }
 
+function appendRealtime(event: { data: { requestLog: RequestLogRow } }) {
+  if (
+    page.value !== 1 ||
+    requestId.value.trim() ||
+    uri.value.trim() ||
+    status.value !== 'all'
+  ) {
+    return
+  }
+  const row = event.data.requestLog
+  rows.value = [
+    row,
+    ...rows.value.filter((item) => item.requestId !== row.requestId),
+  ].slice(0, 20)
+  total.value += 1
+}
+
 function search() {
   page.value = 1
   load()
@@ -66,7 +85,14 @@ function durationText(ms: number) {
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  unsubscribe = subscribeRealtime(appendRealtime)
+})
+
+onBeforeUnmount(() => {
+  unsubscribe?.()
+})
 </script>
 
 <template>

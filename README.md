@@ -18,12 +18,13 @@ LemonGo 是一个以**请求链路追踪与模块责任监控为核心**的模�
 - **责任注册表**：以 `sys_api`、`sys_module`、`sys_developer` 三张表维护“接口 -> 模块 -> 开发者”的归属关系，支持 `/api/products/{id}` 这类带路径参数的 URI 模板。
 - **注册表热加载**：接口责任关系在应用启动时加载，管理端完成 API CRUD 后自动刷新；也保留 `POST /api/admin/apis/refresh` 手动刷新入口。
 - **请求日志**：每次请求结束时统一写入 `request_log`，记录用户、IP、URI、方法、状态码、耗时、Controller/Service/Mapper、模块与负责人，支持按 Request ID / 用户 / 状态 / URI 检索。
+- **实时链路推送**：请求完成后通过 `/ws/monitor` WebSocket 向监控台广播 `REQUEST_COMPLETED`，监控台“实时链路”页面可即时看到用户请求的前端入口、接口、Controller、Service、Mapper 与 HTTP 返回链路。
 - **异常定位**：异常由全局处理器统一处理，按当前请求的 method + 规范化路径定位 API、模块与负责人并写入 `error_log`；响应只暴露通用信息与 Request ID，堆栈详情仅在监控台查询。
 - **实时统计**：Redis 记录 5 分钟在线窗口、用户请求计数、API / 模块请求与错误计数，Redis 故障不会拖垮正常业务请求。
 - **历史统计**：请求结束后同步 upsert MySQL 日维度 `user_activity`、`api_statistics`、`module_statistics`，供监控台查询趋势和累计值。
 - **用户访问指标**：今日访问与累计访问按成功登录会话次数统计，活跃时长为页面停留会话时长；这类指标只在监控台展示。
 - **最小电商闭环**：登录注册、商品浏览与维护、购物车、下单与模拟支付、个人资料编辑，构成可真实操作、可产生观测数据的业务系统。
-- **三端角色入口**：前端划分为用户端、管理端、监控台；后端在 `AuthInterceptor` 中解析 JWT `role` 声明并按接口路径前缀校验角色，`/api/admin/**` 强制 `ADMIN`，`/api/monitor/**` 强制 `MONITOR`。
+- **三端角色入口**：前端划分为用户端、管理端、监控台；后端在 `AuthInterceptor` 中解析 JWT `role` 声明并按接口路径前缀校验角色，`/api/admin/**` 强制 `ADMIN`，`/api/monitor/**` 强制 `MONITOR`。登录态使用标签页级 `sessionStorage`，同一浏览器可分别开启用户端和监控台标签页。
 - **内置模拟异常**：提供 400、404、500、数据库异常、Service 异常五类演示接口，用来验证异常落库与责任定位闭环。
 
 ---

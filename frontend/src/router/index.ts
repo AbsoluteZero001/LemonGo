@@ -7,6 +7,7 @@ const CartView = () => import('@/views/user/CartView.vue')
 const OrderView = () => import('@/views/user/OrderView.vue')
 const ProfileView = () => import('@/views/user/ProfileView.vue')
 const DashboardView = () => import('@/views/monitor/DashboardView.vue')
+const LiveTraceView = () => import('@/views/monitor/LiveTraceView.vue')
 const RequestLogListView = () => import('@/views/request-log/RequestLogListView.vue')
 const RequestDetailView = () => import('@/views/request-log/RequestDetailView.vue')
 const UserActivityView = () => import('@/views/users/UserActivityView.vue')
@@ -117,6 +118,12 @@ const router = createRouter({
       name: 'MonitorDashboard',
       component: DashboardView,
       meta: { title: '监控总览', role: 'MONITOR' },
+    },
+    {
+      path: '/monitor/live',
+      name: 'LiveTrace',
+      component: LiveTraceView,
+      meta: { title: '实时链路', role: 'MONITOR' },
     },
     {
       path: '/monitor/requests',

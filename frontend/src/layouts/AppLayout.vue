@@ -75,6 +75,7 @@ const userMenu = [
 
 const monitorMenu = [
   { path: '/monitor', title: '监控总览', icon: 'DataLine' },
+  { path: '/monitor/live', title: '实时链路', icon: 'Connection' },
   { path: '/monitor/requests', title: '请求日志', icon: 'Document' },
   { path: '/monitor/apis', title: '接口注册表', icon: 'Link' },
   { path: '/monitor/errors', title: '异常日志', icon: 'Warning' },

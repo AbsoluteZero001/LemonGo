@@ -116,6 +116,17 @@ export interface RequestDetail {
   errorLog?: ErrorLog | null
 }
 
+export interface LiveRequestEvent {
+  requestLog: RequestLogRow
+  layers: TraceLayer[]
+}
+
+export interface RealtimeEnvelope {
+  type: string
+  data: LiveRequestEvent
+  timestamp: string
+}
+
 export interface DashboardVo {
   totalRequests: number
   todayRequests: number

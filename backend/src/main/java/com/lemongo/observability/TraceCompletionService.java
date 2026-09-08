@@ -12,9 +12,12 @@ import com.lemongo.observability.mapper.UserActivityMapper;
 import com.lemongo.mapper.SysUserMapper;
 import com.lemongo.responsibility.ApiRegistry;
 import com.lemongo.responsibility.ApiRegistry.Responsibility;
+import com.lemongo.vo.LiveRequestVo;
+import com.lemongo.vo.RequestDetailVo;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +38,7 @@ public class TraceCompletionService {
     private final SysUserMapper sysUserMapper;
     private final ApiRegistry apiRegistry;
     private final RedisObservationService redisObservationService;
+    private final RealtimeNotifier realtimeNotifier;
 
     public void complete(
             String requestId,
@@ -111,6 +115,8 @@ public class TraceCompletionService {
                     errorFlag);
         }
         RequestContext.markErrorLogSaved();
+        realtimeNotifier.publish("REQUEST_COMPLETED",
+                new LiveRequestVo(requestLog, traceLayers(requestLog)));
     }
 
     public void saveError(
@@ -160,6 +166,33 @@ public class TraceCompletionService {
                 || requestLog.getMapperName() == null)) {
             requestLog.setMapperName(responsibility.api().getMapperName());
         }
+    }
+
+    private List<RequestDetailVo.TraceLayerVo> traceLayers(RequestLog requestLog) {
+        List<RequestDetailVo.TraceLayerVo> layers = new ArrayList<>();
+        if (requestLog.getControllerName() != null) {
+            layers.add(new RequestDetailVo.TraceLayerVo(
+                    "CONTROLLER",
+                    requestLog.getControllerName(),
+                    requestLog.getControllerMethod(),
+                    "HTTP 适配层"));
+        }
+        if (requestLog.getServiceName() != null) {
+            String[] service = requestLog.getServiceName().split("\\.", 2);
+            layers.add(new RequestDetailVo.TraceLayerVo(
+                    "SERVICE",
+                    service[0],
+                    service.length > 1 ? service[1] : "",
+                    "业务模块"));
+        }
+        if (requestLog.getMapperName() != null) {
+            layers.add(new RequestDetailVo.TraceLayerVo(
+                    "MAPPER",
+                    requestLog.getMapperName(),
+                    "",
+                    "数据访问层"));
+        }
+        return layers;
     }
 
     private void saveFallbackError(

@@ -22,7 +22,7 @@ const http = axios.create({
 })
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('lemongo_token')
+  const token = sessionStorage.getItem('lemongo_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

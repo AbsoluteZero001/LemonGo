@@ -13,7 +13,7 @@ const PROFILE_KEY = 'lemongo_profile'
 
 function readProfile(): Profile | null {
   try {
-    const raw = localStorage.getItem(PROFILE_KEY)
+    const raw = sessionStorage.getItem(PROFILE_KEY)
     return raw ? (JSON.parse(raw) as Profile) : null
   } catch {
     return null
@@ -22,7 +22,7 @@ function readProfile(): Profile | null {
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem(TOKEN_KEY) ?? '',
+    token: sessionStorage.getItem(TOKEN_KEY) ?? '',
     profile: readProfile(),
   }),
   getters: {
@@ -36,15 +36,15 @@ export const useAuthStore = defineStore('auth', {
       const result = await loginRequest(username, password)
       this.token = result.token
       this.profile = result.profile
-      localStorage.setItem(TOKEN_KEY, result.token)
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile))
+      sessionStorage.setItem(TOKEN_KEY, result.token)
+      sessionStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile))
     },
     async register(username: string, password: string, nickname?: string) {
       const result = await registerRequest(username, password, nickname)
       this.token = result.token
       this.profile = result.profile
-      localStorage.setItem(TOKEN_KEY, result.token)
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile))
+      sessionStorage.setItem(TOKEN_KEY, result.token)
+      sessionStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile))
     },
     async refreshProfile() {
       if (!this.token) {
@@ -52,7 +52,7 @@ export const useAuthStore = defineStore('auth', {
       }
       const profile = await fetchMe()
       this.profile = profile
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
+      sessionStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
     },
     async logout() {
       try {
@@ -62,8 +62,8 @@ export const useAuthStore = defineStore('auth', {
       }
       this.token = ''
       this.profile = null
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(PROFILE_KEY)
+      sessionStorage.removeItem(TOKEN_KEY)
+      sessionStorage.removeItem(PROFILE_KEY)
     },
     async heartbeat() {
       if (!this.token) {
