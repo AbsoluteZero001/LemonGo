@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
     phone VARCHAR(30) DEFAULT NULL,
     avatar_url VARCHAR(255) DEFAULT NULL,
     status TINYINT NOT NULL DEFAULT 1,
+    role VARCHAR(20) NOT NULL DEFAULT 'USER' COMMENT 'role: USER/ADMIN/MONITOR',
     online_status TINYINT NOT NULL DEFAULT 0 COMMENT '0 offline, 1 online',
     first_login_time DATETIME(3) DEFAULT NULL,
     last_login_time DATETIME(3) DEFAULT NULL,

@@ -6,10 +6,12 @@ import com.lemongo.entity.ApiStatistics;
 import com.lemongo.entity.ErrorLog;
 import com.lemongo.entity.ModuleStatistics;
 import com.lemongo.entity.RequestLog;
+import com.lemongo.entity.SysApi;
 import com.lemongo.entity.SysDeveloper;
 import com.lemongo.entity.SysModule;
 import com.lemongo.entity.SysUser;
 import com.lemongo.entity.UserActivity;
+import com.lemongo.mapper.SysApiMapper;
 import com.lemongo.mapper.SysDeveloperMapper;
 import com.lemongo.mapper.SysModuleMapper;
 import com.lemongo.mapper.SysUserMapper;
@@ -19,8 +21,10 @@ import com.lemongo.observability.mapper.ErrorLogMapper;
 import com.lemongo.observability.mapper.ModuleStatisticsMapper;
 import com.lemongo.observability.mapper.RequestLogMapper;
 import com.lemongo.observability.mapper.UserActivityMapper;
+import com.lemongo.vo.ApiRegistryVo;
 import com.lemongo.vo.DashboardVo;
 import com.lemongo.vo.DeveloperMonitorVo;
+import com.lemongo.vo.ErrorLogVo;
 import com.lemongo.vo.ModuleMonitorVo;
 import com.lemongo.vo.RequestDetailVo;
 import com.lemongo.vo.UserActivityVo;
@@ -49,6 +53,7 @@ public class MonitorService {
     private final ApiStatisticsMapper apiStatisticsMapper;
     private final ModuleStatisticsMapper moduleStatisticsMapper;
     private final UserActivityMapper userActivityMapper;
+    private final SysApiMapper apiMapper;
     private final SysDeveloperMapper developerMapper;
     private final SysModuleMapper moduleMapper;
     private final SysUserMapper userMapper;
@@ -224,6 +229,77 @@ public class MonitorService {
                 })
                 .sorted(Comparator.comparingLong(DeveloperMonitorVo::requestCount).reversed())
                 .toList();
+    }
+
+    public List<ApiRegistryVo> apis() {
+        List<SysApi> apis = apiMapper.selectList(
+                new LambdaQueryWrapper<SysApi>().orderByAsc(SysApi::getId));
+        Map<Long, SysModule> modules = moduleMapper.selectList(null).stream()
+                .collect(Collectors.toMap(SysModule::getId, Function.identity()));
+        Map<Long, SysDeveloper> developers = developerMapper.selectList(null).stream()
+                .collect(Collectors.toMap(SysDeveloper::getId, Function.identity()));
+        return apis.stream()
+                .map(api -> {
+                    SysModule module = modules.get(api.getModuleId());
+                    SysDeveloper developer = developers.get(api.getDeveloperId());
+                    return new ApiRegistryVo(
+                            api.getId(),
+                            api.getApiPath(),
+                            api.getHttpMethod(),
+                            api.getModuleId(),
+                            module == null ? null : module.getModuleName(),
+                            api.getControllerName(),
+                            api.getControllerMethod(),
+                            api.getServiceName(),
+                            api.getMapperName(),
+                            api.getDescription(),
+                            api.getDeveloperId(),
+                            developer == null ? null : developer.getName(),
+                            api.getStatus());
+                })
+                .toList();
+    }
+
+    public Page<ErrorLogVo> errors(
+            long page,
+            long size,
+            String requestId,
+            Integer errorCode,
+            Long moduleId) {
+        Page<ErrorLog> errorPage = errorLogMapper.selectPage(
+                new Page<>(page, size),
+                new LambdaQueryWrapper<ErrorLog>()
+                        .eq(StringUtils.hasText(requestId), ErrorLog::getRequestId, requestId)
+                        .eq(errorCode != null, ErrorLog::getErrorCode, errorCode)
+                        .eq(moduleId != null, ErrorLog::getModuleId, moduleId)
+                        .orderByDesc(ErrorLog::getOccurredAt));
+        Map<Long, SysModule> modules = moduleMapper.selectList(null).stream()
+                .collect(Collectors.toMap(SysModule::getId, Function.identity()));
+        Map<Long, SysDeveloper> developers = developerMapper.selectList(null).stream()
+                .collect(Collectors.toMap(SysDeveloper::getId, Function.identity()));
+        Page<ErrorLogVo> result = new Page<>(errorPage.getCurrent(), errorPage.getSize());
+        result.setTotal(errorPage.getTotal());
+        result.setRecords(errorPage.getRecords().stream()
+                .map(error -> {
+                    SysModule module = modules.get(error.getModuleId());
+                    SysDeveloper developer = developers.get(error.getDeveloperId());
+                    return new ErrorLogVo(
+                            error.getId(),
+                            error.getRequestId(),
+                            error.getApiId(),
+                            error.getModuleId(),
+                            module == null ? null : module.getModuleName(),
+                            error.getDeveloperId(),
+                            developer == null ? null : developer.getName(),
+                            error.getErrorCode(),
+                            error.getErrorType(),
+                            error.getErrorMessage(),
+                            error.getExceptionClass(),
+                            error.getStackTrace(),
+                            error.getOccurredAt());
+                })
+                .toList());
+        return result;
     }
 
     private List<DashboardVo.TrendPoint> trend() {

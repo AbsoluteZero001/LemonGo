@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { addToCart, fetchProducts } from '@/api/system'
+import { addToCart, fetchCategories, fetchProducts } from '@/api/system'
 import type { Product } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
 
@@ -15,7 +15,7 @@ const total = ref(0)
 const page = ref(1)
 const keyword = ref('')
 const category = ref('全部')
-const categories = ['全部', '生鲜水果', '厨房电器', '运动户外', '箱包配件', '家居生活']
+const categories = ref<string[]>(['全部'])
 
 async function load() {
   loading.value = true
@@ -55,6 +55,15 @@ function changeCategory(value: string | number | boolean | undefined | null) {
   search()
 }
 
+async function loadCategories() {
+  try {
+    const list = await fetchCategories()
+    categories.value = ['全部', ...list]
+  } catch {
+    categories.value = ['全部']
+  }
+}
+
 async function add(product: Product) {
   if (!auth.isLoggedIn) {
     router.push('/login')
@@ -64,7 +73,10 @@ async function add(product: Product) {
   ElMessage.success('已加入购物车')
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadCategories()
+})
 </script>
 
 <template>

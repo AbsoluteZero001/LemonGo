@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Clock, DataLine, Message, Phone } from '@element-plus/icons-vue'
-import { fetchUserActivity } from '@/api/system'
+import { fetchMeActivity } from '@/api/system'
 import type { UserActivity } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
 
@@ -21,8 +21,7 @@ async function load() {
   loading.value = true
   try {
     await auth.refreshProfile()
-    const list = await fetchUserActivity()
-    activity.value = list.find((item) => item.userId === auth.profile?.id) ?? null
+    activity.value = await fetchMeActivity()
   } catch {
     activity.value = null
   } finally {

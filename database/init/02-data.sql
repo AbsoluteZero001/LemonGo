@@ -16,7 +16,8 @@ INSERT INTO sys_module (id, module_name, module_code, description, developer_id)
     (2, '商品模块', 'PRODUCT', '商品查询与维护', 10002),
     (3, '购物车模块', 'CART', '购物车操作', 10003),
     (4, '订单模块', 'ORDER', '下单与订单查询', 10002),
-    (5, '系统监控模块', 'MONITOR', '请求日志与统计监控', 10003);
+    (5, '系统监控模块', 'MONITOR', '请求日志与统计监控', 10003),
+    (6, '系统管理模块', 'SYSTEM', '责任关系与系统配置', 10003);
 
 INSERT INTO sys_api
     (id, api_path, http_method, module_id, controller_name, controller_method,
@@ -48,14 +49,44 @@ VALUES
     (24, '/api/test/error/database', 'GET', 5, 'TestErrorController', 'databaseError', 'TestErrorService.throwDatabaseError', 'TestErrorMapper', '模拟数据库异常', 10003),
     (25, '/api/test/error/service', 'GET', 5, 'TestErrorController', 'serviceError', 'TestErrorService.throwServiceError', NULL, '模拟 Service 异常', 10003),
     (26, '/api/orders/{id}/pay', 'POST', 4, 'OrderController', 'pay', 'OrderService.pay', 'OrderMasterMapper', '模拟支付订单', 10002),
-    (27, '/api/monitor/developers', 'GET', 5, 'MonitorController', 'developers', 'MonitorService.developers', NULL, '开发者监控', 10003);
+    (27, '/api/monitor/developers', 'GET', 5, 'MonitorController', 'developers', 'MonitorService.developers', NULL, '开发者监控', 10003),
+    (28, '/api/monitor/apis', 'GET', 5, 'MonitorController', 'apis', 'MonitorService.apis', 'SysApiMapper', '接口注册表', 10003),
+    (29, '/api/monitor/errors', 'GET', 5, 'MonitorController', 'errors', 'MonitorService.errors', 'ErrorLogMapper', '异常日志', 10003),
+    (30, '/api/users/me/activity', 'GET', 1, 'UserController', 'meActivity', 'UserService.meActivity', 'UserActivityMapper', '我的活跃度', 10001),
+    (31, '/api/products/categories', 'GET', 2, 'ProductController', 'categories', 'ProductService.categories', 'ProductMapper', '商品分类', 10002),
+    (32, '/api/admin/products', 'GET', 2, 'AdminProductController', 'list', 'ProductService.adminList', 'ProductMapper', '管理端商品列表', 10002),
+    (33, '/api/admin/products', 'POST', 2, 'AdminProductController', 'create', 'ProductService.create', 'ProductMapper', '管理端新增商品', 10002),
+    (34, '/api/admin/products/{id}', 'PUT', 2, 'AdminProductController', 'update', 'ProductService.update', 'ProductMapper', '管理端更新商品', 10002),
+    (35, '/api/admin/products/{id}', 'DELETE', 2, 'AdminProductController', 'delete', 'ProductService.delete', 'ProductMapper', '管理端删除商品', 10002),
+    (36, '/api/admin/products/{id}/restore', 'PUT', 2, 'AdminProductController', 'restore', 'ProductService.restore', 'ProductMapper', '管理端恢复商品', 10002),
+    (37, '/api/admin/users', 'GET', 1, 'AdminUserController', 'list', 'AdminUserService.list', 'SysUserMapper', '管理端用户列表', 10001),
+    (38, '/api/admin/users', 'POST', 1, 'AdminUserController', 'create', 'AdminUserService.create', 'SysUserMapper', '管理端新增用户', 10001),
+    (39, '/api/admin/users/{id}', 'PUT', 1, 'AdminUserController', 'update', 'AdminUserService.update', 'SysUserMapper', '管理端更新用户', 10001),
+    (40, '/api/admin/orders', 'GET', 4, 'AdminOrderController', 'list', 'AdminOrderService.list', 'OrderMasterMapper', '管理端订单列表', 10002),
+    (41, '/api/admin/orders/{id}/status', 'PUT', 4, 'AdminOrderController', 'updateStatus', 'AdminOrderService.updateStatus', 'OrderMasterMapper', '管理端订单状态', 10002),
+    (42, '/api/admin/developers', 'GET', 6, 'AdminDeveloperController', 'list', 'DeveloperAdminService.list', 'SysDeveloperMapper', '开发者列表', 10003),
+    (43, '/api/admin/developers', 'POST', 6, 'AdminDeveloperController', 'create', 'DeveloperAdminService.create', 'SysDeveloperMapper', '新增开发者', 10003),
+    (44, '/api/admin/developers/{id}', 'PUT', 6, 'AdminDeveloperController', 'update', 'DeveloperAdminService.update', 'SysDeveloperMapper', '更新开发者', 10003),
+    (45, '/api/admin/developers/{id}', 'DELETE', 6, 'AdminDeveloperController', 'delete', 'DeveloperAdminService.delete', 'SysDeveloperMapper', '删除开发者', 10003),
+    (46, '/api/admin/modules', 'GET', 6, 'AdminModuleController', 'list', 'ModuleAdminService.list', 'SysModuleMapper', '模块列表', 10003),
+    (47, '/api/admin/modules', 'POST', 6, 'AdminModuleController', 'create', 'ModuleAdminService.create', 'SysModuleMapper', '新增模块', 10003),
+    (48, '/api/admin/modules/{id}', 'PUT', 6, 'AdminModuleController', 'update', 'ModuleAdminService.update', 'SysModuleMapper', '更新模块', 10003),
+    (49, '/api/admin/modules/{id}', 'DELETE', 6, 'AdminModuleController', 'delete', 'ModuleAdminService.delete', 'SysModuleMapper', '删除模块', 10003),
+    (50, '/api/admin/apis', 'GET', 6, 'AdminApiController', 'list', 'ApiAdminService.list', 'SysApiMapper', '接口列表', 10003),
+    (51, '/api/admin/apis', 'POST', 6, 'AdminApiController', 'create', 'ApiAdminService.create', 'SysApiMapper', '新增接口', 10003),
+    (52, '/api/admin/apis/{id}', 'PUT', 6, 'AdminApiController', 'update', 'ApiAdminService.update', 'SysApiMapper', '更新接口', 10003),
+    (53, '/api/admin/apis/{id}', 'DELETE', 6, 'AdminApiController', 'delete', 'ApiAdminService.delete', 'SysApiMapper', '删除接口', 10003),
+    (54, '/api/admin/apis/refresh', 'POST', 6, 'AdminApiController', 'refresh', 'ApiAdminService.refresh', 'SysApiMapper', '刷新注册表', 10003);
 
 -- Seed users use a salted hash design that will be finalized together with JWT login.
+-- role: USER = 用户端, ADMIN = 管理端, MONITOR = 监控台.
 INSERT INTO sys_user
-    (id, username, password_hash, nickname, email, phone)
+    (id, username, password_hash, nickname, email, phone, role)
 VALUES
-    (1, 'zhangsan', '{seed}zhangsan-123456', '张三', 'zhangsan@lemongo.local', '13800000001'),
-    (2, 'lisi', '{seed}lisi-123456', '李四用户', 'lisi@lemongo.local', '13800000002');
+    (1, 'zhangsan', '{seed}zhangsan-123456', '张三', 'zhangsan@lemongo.local', '13800000001', 'USER'),
+    (2, 'lisi', '{seed}lisi-123456', '李四用户', 'lisi@lemongo.local', '13800000002', 'USER'),
+    (3, 'admin', '{seed}admin-123456', '管理员', 'admin@lemongo.local', '13800000003', 'ADMIN'),
+    (4, 'monitor', '{seed}monitor-123456', '监控员', 'monitor@lemongo.local', '13800000004', 'MONITOR');
 
 INSERT INTO product
     (id, product_name, category, price, stock, sales, image_url, detail_text, status)

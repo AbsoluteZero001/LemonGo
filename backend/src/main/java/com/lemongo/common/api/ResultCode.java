@@ -10,6 +10,7 @@ public enum ResultCode {
     OK(200, "success"),
     BAD_REQUEST(400, "bad request"),
     UNAUTHORIZED(401, "unauthorized"),
+    FORBIDDEN(403, "forbidden"),
     NOT_FOUND(404, "resource not found"),
     INTERNAL_ERROR(500, "internal server error"),
     SERVICE_UNAVAILABLE(503, "service unavailable");

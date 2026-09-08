@@ -25,10 +25,31 @@ const userMenu = [
 const monitorMenu = [
   { path: '/monitor', title: '监控总览', icon: 'DataLine' },
   { path: '/monitor/requests', title: '请求日志', icon: 'Document' },
+  { path: '/monitor/apis', title: '接口注册表', icon: 'Link' },
+  { path: '/monitor/errors', title: '异常日志', icon: 'Warning' },
   { path: '/monitor/users', title: '用户活跃', icon: 'UserFilled' },
   { path: '/monitor/modules', title: '模块监控', icon: 'FolderOpened' },
   { path: '/monitor/developers', title: '开发者', icon: 'Platform' },
 ]
+
+const adminMenu = [
+  { path: '/admin/products', title: '商品管理', icon: 'Goods' },
+  { path: '/admin/users', title: '用户管理', icon: 'User' },
+  { path: '/admin/orders', title: '订单管理', icon: 'Tickets' },
+  { path: '/admin/developers', title: '开发者管理', icon: 'Avatar' },
+  { path: '/admin/modules', title: '模块管理', icon: 'FolderOpened' },
+  { path: '/admin/apis', title: '接口管理', icon: 'Link' },
+]
+
+const roleLabel = computed(() => {
+  if (auth.role === 'ADMIN') {
+    return '管理端'
+  }
+  if (auth.role === 'MONITOR') {
+    return '监控台'
+  }
+  return '用户端'
+})
 
 function logout() {
   auth.logout()
@@ -48,23 +69,22 @@ function logout() {
       </div>
 
       <el-menu :default-active="route.path" router class="app-menu">
-        <el-menu-item-group title="用户端">
-          <el-menu-item
-            v-for="item in userMenu"
-            :key="item.path"
-            :index="item.path"
-          >
+        <el-menu-item-group v-if="auth.role === 'USER'" title="用户端">
+          <el-menu-item v-for="item in userMenu" :key="item.path" :index="item.path">
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.title }}</span>
           </el-menu-item>
         </el-menu-item-group>
 
-        <el-menu-item-group title="监控台">
-          <el-menu-item
-            v-for="item in monitorMenu"
-            :key="item.path"
-            :index="item.path"
-          >
+        <el-menu-item-group v-if="auth.role === 'ADMIN'" title="管理端">
+          <el-menu-item v-for="item in adminMenu" :key="item.path" :index="item.path">
+            <el-icon><component :is="item.icon" /></el-icon>
+            <span>{{ item.title }}</span>
+          </el-menu-item>
+        </el-menu-item-group>
+
+        <el-menu-item-group v-if="auth.role === 'MONITOR'" title="监控台">
+          <el-menu-item v-for="item in monitorMenu" :key="item.path" :index="item.path">
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.title }}</span>
           </el-menu-item>
@@ -77,6 +97,7 @@ function logout() {
         <div class="header-inner">
           <span class="page-title">{{ currentTitle }}</span>
           <div v-if="auth.profile" class="user-box">
+            <el-tag effect="plain" round class="role-tag">{{ roleLabel }}</el-tag>
             <el-tag effect="plain" round class="user-tag">
               {{ auth.profile.nickname }} · 活跃度 {{ auth.profile.activityScore }}
             </el-tag>
@@ -191,6 +212,11 @@ function logout() {
 
 .user-tag {
   color: var(--lg-green);
+  font-weight: 600;
+}
+
+.role-tag {
+  color: #5b6ee1;
   font-weight: 600;
 }
 

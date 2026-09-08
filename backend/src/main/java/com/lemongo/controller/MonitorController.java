@@ -4,8 +4,10 @@ import com.lemongo.common.api.PageResult;
 import com.lemongo.common.api.Result;
 import com.lemongo.entity.RequestLog;
 import com.lemongo.service.MonitorService;
+import com.lemongo.vo.ApiRegistryVo;
 import com.lemongo.vo.DashboardVo;
 import com.lemongo.vo.DeveloperMonitorVo;
+import com.lemongo.vo.ErrorLogVo;
 import com.lemongo.vo.ModuleMonitorVo;
 import com.lemongo.vo.RequestDetailVo;
 import com.lemongo.vo.UserActivityVo;
@@ -66,5 +68,21 @@ public class MonitorController {
     @GetMapping("/developers")
     public Result<List<DeveloperMonitorVo>> developers() {
         return Result.ok(monitorService.developers());
+    }
+
+    @GetMapping("/apis")
+    public Result<List<ApiRegistryVo>> apis() {
+        return Result.ok(monitorService.apis());
+    }
+
+    @GetMapping("/errors")
+    public Result<PageResult<ErrorLogVo>> errors(
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "20") long size,
+            @RequestParam(required = false) String requestId,
+            @RequestParam(required = false) Integer errorCode,
+            @RequestParam(required = false) Long moduleId) {
+        return Result.ok(PageResult.of(
+                monitorService.errors(page, size, requestId, errorCode, moduleId)));
     }
 }

@@ -18,6 +18,7 @@ public class SysUser {
     private String phone;
     private String avatarUrl;
     private Integer status;
+    private String role;
     private Integer onlineStatus;
     private LocalDateTime firstLoginTime;
     private LocalDateTime lastLoginTime;

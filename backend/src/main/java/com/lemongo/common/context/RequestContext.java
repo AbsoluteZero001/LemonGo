@@ -38,6 +38,7 @@ public final class RequestContext {
         private Trace trace;
         private Long userId;
         private String username;
+        private String role;
         private final Map<String, LayerSpan> primaryLayers = new LinkedHashMap<>();
         private String errorType;
         private String exceptionClass;
@@ -83,6 +84,18 @@ public final class RequestContext {
     public static String username() {
         Scope scope = SCOPES.get();
         return scope == null ? null : scope.username;
+    }
+
+    public static void setRole(String role) {
+        Scope scope = SCOPES.get();
+        if (scope != null) {
+            scope.role = role;
+        }
+    }
+
+    public static String role() {
+        Scope scope = SCOPES.get();
+        return scope == null ? null : scope.role;
     }
 
     public static String requestIdOrEmpty() {

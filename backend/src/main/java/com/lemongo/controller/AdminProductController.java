@@ -6,7 +6,6 @@ import com.lemongo.dto.ProductSaveRequest;
 import com.lemongo.entity.Product;
 import com.lemongo.service.ProductService;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,29 +18,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/admin/products")
 @RequiredArgsConstructor
-public class ProductController {
+public class AdminProductController {
 
     private final ProductService productService;
 
     @GetMapping
     public Result<PageResult<Product>> list(
             @RequestParam(defaultValue = "1") long page,
-            @RequestParam(defaultValue = "12") long size,
-            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "20") long size,
             @RequestParam(required = false) String keyword) {
-        return Result.ok(PageResult.of(productService.list(page, size, category, keyword)));
-    }
-
-    @GetMapping("/categories")
-    public Result<List<String>> categories() {
-        return Result.ok(productService.categories());
-    }
-
-    @GetMapping("/{id}")
-    public Result<Product> detail(@PathVariable Long id) {
-        return Result.ok(productService.detail(id));
+        return Result.ok(PageResult.of(productService.adminList(page, size, keyword)));
     }
 
     @PostMapping
@@ -59,5 +47,10 @@ public class ProductController {
     public Result<Void> delete(@PathVariable Long id) {
         productService.delete(id);
         return Result.ok();
+    }
+
+    @PutMapping("/{id}/restore")
+    public Result<Product> restore(@PathVariable Long id) {
+        return Result.ok(productService.restore(id));
     }
 }

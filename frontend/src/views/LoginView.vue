@@ -9,8 +9,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const loading = ref(false)
 const form = reactive({
-  username: 'zhangsan',
-  password: 'zhangsan-123456',
+  username: '',
+  password: '',
 })
 
 async function submit() {
@@ -18,17 +18,14 @@ async function submit() {
   try {
     await auth.login(form.username, form.password)
     ElMessage.success(`欢迎回来，${auth.profile?.nickname ?? ''}`)
-    router.push('/products')
+    const home =
+      auth.role === 'ADMIN' ? '/admin' : auth.role === 'MONITOR' ? '/monitor' : '/products'
+    router.push(home)
   } catch {
     // The shared error panel already shows the backend trace.
   } finally {
     loading.value = false
   }
-}
-
-function chooseDemo(username: string, password: string) {
-  form.username = username
-  form.password = password
 }
 </script>
 
@@ -66,14 +63,6 @@ function chooseDemo(username: string, password: string) {
           登录
         </el-button>
       </el-form>
-      <div class="demo-row">
-        <el-button size="small" @click="chooseDemo('zhangsan', 'zhangsan-123456')">
-          张三
-        </el-button>
-        <el-button size="small" @click="chooseDemo('lisi', 'lisi-123456')">
-          李四
-        </el-button>
-      </div>
     </section>
   </div>
 </template>
@@ -135,12 +124,5 @@ function chooseDemo(username: string, password: string) {
 .login-button {
   width: 100%;
   margin-top: 6px;
-}
-
-.demo-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
 }
 </style>

@@ -75,6 +75,7 @@ public class AuthService {
         return new ProfileVo(
                 user.getId(),
                 user.getUsername(),
+                user.getRole(),
                 user.getNickname(),
                 user.getEmail(),
                 user.getPhone(),

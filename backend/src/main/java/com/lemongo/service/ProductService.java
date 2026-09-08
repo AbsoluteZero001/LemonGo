@@ -50,6 +50,10 @@ public class ProductService {
         return productMapper.selectBatchIds(ids);
     }
 
+    public List<String> categories() {
+        return productMapper.selectCategories();
+    }
+
     public Product create(ProductSaveRequest request) {
         Product product = new Product();
         product.setProductName(request.productName());
@@ -86,5 +90,24 @@ public class ProductService {
         product.setStatus(0);
         product.setDeleted(1);
         productMapper.updateById(product);
+    }
+
+    public Page<Product> adminList(long page, long size, String keyword) {
+        LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<Product>()
+                .like(StringUtils.hasText(keyword), Product::getProductName, keyword)
+                .orderByDesc(Product::getId);
+        return productMapper.selectPage(new Page<>(page, size), wrapper);
+    }
+
+    public Product restore(Long id) {
+        Product product = productMapper.selectById(id);
+        if (product == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND.getCode(), "商品不存在");
+        }
+        product.setStatus(1);
+        product.setDeleted(0);
+        product.setUpdatedAt(LocalDateTime.now(ZoneId.of("Asia/Shanghai")));
+        productMapper.updateById(product);
+        return product;
     }
 }
