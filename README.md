@@ -1,31 +1,102 @@
 # LemonGo 乐檬购
 
-LemonGo 是一个以**请求链路追踪与模块责任监控为核心**的模拟电商系统。项目刻意保持小体量，用用户、商品、购物车、订单和模拟支付组成一条真实业务闭环，把主要精力放在让每个请求都可解释、可追踪、可问责：
+> 一个以 **请求链路可观测性与模块责任问责** 为核心主题的模拟电商系统。
 
-1. 谁在什么时间访问了什么 API？
-2. 请求经过了 Controller、Service、Mapper，并落到 MySQL / Redis，耗时如何？
+LemonGo 刻意保持小体量：用 **用户、商品、购物车、订单 + 模拟支付** 拼出一条真实可操作的业务闭环，把主要精力放在让**每一个请求都可解释、可追踪、可问责**。它不追求"商城功能多"，而追求"一次请求能被完整解释"——这也是整个项目最想表达的东西：
+
+1. 谁、在什么时间、从哪个 IP 访问了哪个 API？
+2. 这个请求依次经过了 Controller → Service → Mapper，最后落到 MySQL / Redis，各层耗时多少？
 3. 请求成功了吗？失败发生在哪个接口、哪个模块、哪一层？
-4. 该模块或接口由哪位开发者负责？
+4. 这个接口或模块由哪一位开发者负责？出问题找谁？
+
+业务在这里不是目的，而是**制造真实观测数据的引擎**：商城闭环让请求日志、错误日志、活跃度、日维度统计有真实流量可记，而这些可观测性数据反过来又能解释业务为什么慢、为什么错、谁该负责。
 
 > 默认密码、种子数据和 JWT 密钥均为演示配置，适合教学、原型演示与可观测性实验，不应直接用于生产环境。
 
 ---
 
-## 功能特性
+## 目录
 
-- **Request ID 链路**：`TraceFilter` 透传或生成 `X-Request-Id`，贯穿请求响应头、统一响应体、MDC 日志和数据库日志；浏览器可直接用同一个 ID 追踪异常。
-- **分层耗时采集**：`ChainTraceAspect` 通过 AOP 记录每次请求首次经过的 Controller、Service、Mapper 方法及耗时，作为请求详情的链路步骤。
-- **责任注册表**：以 `sys_api`、`sys_module`、`sys_developer` 三张表维护“接口 -> 模块 -> 开发者”的归属关系，支持 `/api/products/{id}` 这类带路径参数的 URI 模板。
-- **注册表热加载**：接口责任关系在应用启动时加载，管理端完成 API CRUD 后自动刷新；也保留 `POST /api/admin/apis/refresh` 手动刷新入口。
-- **请求日志**：每次请求结束时统一写入 `request_log`，记录用户、IP、URI、方法、状态码、耗时、Controller/Service/Mapper、模块与负责人，支持按 Request ID / 用户 / 状态 / URI 检索。
-- **实时链路推送**：请求完成后通过 `/ws/monitor` WebSocket 向监控台广播 `REQUEST_COMPLETED`，监控台“实时链路”页面可即时看到用户请求的前端入口、接口、Controller、Service、Mapper 与 HTTP 返回链路。
-- **异常定位**：异常由全局处理器统一处理，按当前请求的 method + 规范化路径定位 API、模块与负责人并写入 `error_log`；响应只暴露通用信息与 Request ID，堆栈详情仅在监控台查询。
-- **实时统计**：Redis 记录 5 分钟在线窗口、用户请求计数、API / 模块请求与错误计数，Redis 故障不会拖垮正常业务请求。
-- **历史统计**：请求结束后同步 upsert MySQL 日维度 `user_activity`、`api_statistics`、`module_statistics`，供监控台查询趋势和累计值。
-- **用户访问指标**：今日访问与累计访问按成功登录会话次数统计，活跃时长为页面停留会话时长；这类指标只在监控台展示。
-- **最小电商闭环**：登录注册、商品浏览与维护、购物车、下单与模拟支付、个人资料编辑，构成可真实操作、可产生观测数据的业务系统。
-- **三端角色入口**：前端划分为用户端、管理端、监控台；后端在 `AuthInterceptor` 中解析 JWT `role` 声明并按接口路径前缀校验角色，`/api/admin/**` 强制 `ADMIN`，`/api/monitor/**` 强制 `MONITOR`。登录态使用标签页级 `sessionStorage`，同一浏览器可分别开启用户端和监控台标签页。
-- **内置模拟异常**：提供 400、404、500、数据库异常、Service 异常五类演示接口，用来验证异常落库与责任定位闭环。
+- [核心价值](#核心价值)
+- [业务闭环](#业务闭环)
+- [技术栈](#技术栈)
+- [请求链路](#请求链路)
+- [目录结构](#目录结构)
+- [快速开始](#快速开始)
+- [演示账号](#演示账号)
+- [环境变量](#环境变量)
+- [API 概览](#api-概览)
+- [日志体系详解](#日志体系详解)
+- [常用命令](#常用命令)
+- [当前进度](#当前进度)
+- [License](#license)
+
+---
+
+## 核心价值
+
+LemonGo 的价值不在"又一个电商 Demo"，而在一个可复用的**可观测性骨架**。它回答了后端系统最难回答的三个问题：
+
+### 1. 可解释 —— 每个请求都有完整上下文
+
+- 每个请求由 `TraceFilter` 透传或生成一个 `X-Request-Id`，贯穿**响应头、统一响应体、MDC 日志、数据库日志**四者。
+- 浏览器拿到 Request ID，就能反查这条请求在 Controller/Service/Mapper 每一层走了多久、最终 HTTP 状态是什么。
+- 前端拿到这个 ID 不需要翻日志文件，直接调监控接口就能看到整条链路。
+
+### 2. 可追踪 —— 分层耗时与链路步骤
+
+- `ChainTraceAspect` 通过 AOP 无侵入地采集每次请求**首次经过**的 Controller、Service、Mapper 方法及各自耗时。
+- 请求结束时统一落库，形成一条可查询的"链路步骤"：`前端入口 → 接口 → Controller → Service → Mapper → HTTP 返回`。
+- 监控台"实时链路"页面通过 WebSocket 即时广播 `REQUEST_COMPLETED`，用户刚点完一个按钮，监控台就能看到这次请求的完整链路。
+
+### 3. 可问责 —— 接口 → 模块 → 开发者责任链
+
+- 用 `sys_api` → `sys_module` → `sys_developer` 三张表维护"接口归谁管"的完整责任链。
+- 异常发生时，全局异常处理器按当前请求的 `method + 规范化路径` 匹配到接口，再沿外键一路定位到模块和负责人。
+- 前端错误页与监控台展示的是同一条责任链：**"商品详情模块发生异常"，责任人：李四（DEV10002）**。
+
+> 一句话总结核心主题：**业务制造流量，链路解释流量，责任追责到人。**
+
+---
+
+## 业务闭环
+
+LemonGo 用四个真实业务域 + 模拟支付，构成一条**最小但完整、可真实操作、能持续产生观测数据**的闭环：
+
+```text
+登录 / 注册
+    │
+    v
+浏览商品列表 ──▶ 查看商品详情
+    │
+    v
+加入购物车 ──▶ 修改数量 / 勾选 / 移除
+    │
+    v
+提交订单（锁定库存）
+    │
+    v
+模拟支付 ──▶ 订单完成
+    │
+    v
+个人中心：查看订单、编辑资料
+```
+
+闭环设计原则：
+
+1. **业务够真**：商品是真实 MySQL CRUD，下单会校验并扣减库存（乐观锁 `version`），订单有状态流转（`CREATED → PAID → FINISHED / CANCELLED`），不是写死的假数据。
+2. **边界清晰**：用户、商品、购物车、订单四大域各自成包，Controller/Service/Mapper 分层只做一件事，为后续拆分留空间。
+3. **反哺可观测**：每一次浏览、加购、下单、支付，都会真实触发请求落库、Redis 计数、活跃度与统计更新——业务越活跃，可观测数据越丰富，两个目标互相增强。
+
+| 业务域 | 关键能力 | 对应的可观测产出 |
+| --- | --- | --- |
+| 用户 | 注册、登录、退出、页面心跳、资料编辑 | `login_log`、`user_activity`、在线状态 |
+| 商品 | 列表、分类、详情、管理端 CRUD | `request_log`、`api_statistics` |
+| 购物车 | 加购、改数量、勾选、移除 | `request_log`、`api_statistics` |
+| 订单 | 下单、列表、详情、模拟支付 | `request_log`、`module_statistics` |
+| 模拟异常 | 400/404/500/database/service 五类演示接口 | `error_log`、责任定位闭环 |
+
+此外，系统内置五类**模拟异常接口**，用来专门验证"异常落库 → 责任定位 → 前端错误页"这条闭环是否真的打通。
 
 ---
 
@@ -45,7 +116,8 @@ LemonGo 是一个以**请求链路追踪与模块责任监控为核心**的模�
 | 前端 | ECharts | 6.x |
 | 前端 | Pinia / Vue Router | 3.x / 4.5.x |
 | 存储 | MySQL | 8.4 |
-| 缓存 | Redis | 7.4 |
+| 缓存 / 实时计数 | Redis | 7.4 |
+| 应用日志 | Logback（文件滚动） | Spring Boot 内建 |
 
 ---
 
@@ -77,9 +149,10 @@ GlobalExceptionHandler + ErrorTraceResolver（写入 error_log）
   v
 TraceFilter finally -> TraceCompletionService
   - 写入 request_log
-  - 更新 user_activity
-  - upsert api_statistics / module_statistics
+  - 更新 user_activity（日维度活跃度）
+  - upsert api_statistics / module_statistics（日维度统计）
   - 更新 Redis 在线窗口与计数器
+  - WebSocket 广播 REQUEST_COMPLETED
 ```
 
 核心可观测代码集中在 `backend/src/main/java/com/lemongo/observability/`，详细的包设计、Redis Key 与异常模型见 [docs/01-architecture.md](docs/01-architecture.md)。
@@ -99,10 +172,10 @@ LemonGo
 │       ├── mapper/             MyBatis-Plus Mapper
 │       ├── entity/ dto/ vo/    实体、入参、出参
 │       ├── exception/          BusinessException 与全局异常处理
-│       ├── aspect/             分层链路采集切面
-│       ├── filter/             TraceFilter
+│       ├── aspect/             分层链路采集切面（ChainTraceAspect）
+│       ├── filter/             TraceFilter、鉴权过滤器
 │       ├── observability/      请求完成落库、错误定位、Redis 实时统计与日维度统计
-│       └── responsibility/     API 责任注册表
+│       └── responsibility/     API 责任注册表（ApiRegistry）
 ├── frontend/                    Vue 3 + Vite + TypeScript 前端
 │   └── src/
 │       ├── views/user/         商品、购物车、订单、个人中心
@@ -155,7 +228,7 @@ REDIS_PORT=6379
 docker compose up -d
 ```
 
-该命令启动 MySQL 与 Redis。首次创建 MySQL 数据卷时，会自动执行 `database/init/` 下的 `01-schema.sql`、`02-data.sql`、`03-demo-data.sql` 完成建库、建表、基础数据与演示数据初始化。
+该命令启动 MySQL 与 Redis。首次创建 MySQL 数据卷时，会自动执行 `database/init/` 下的 `01-schema.sql`、`02-data.sql`、`03-demo-data.sql`、`04-session-metrics.sql` 完成建库、建表、基础数据与演示数据初始化。
 
 如需清空并重新初始化本地数据：
 
@@ -275,6 +348,160 @@ npm run dev
 | 模拟异常 | `GET /api/test/error/{400,404,500,database,service}` | 五类异常演示 |
 
 完整接口定义以 Swagger UI（`/swagger-ui.html`）为准。
+
+---
+
+## 日志体系详解
+
+LemonGo 的"日志"不是单一概念，而是按**用途和生命周期**拆成三类载体，各有明确分工：
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                        日志体系                              │
+│                                                             │
+│  1. MySQL 结构化日志（历史、可检索、永久）                      │
+│     request_log / error_log / login_log                      │
+│     user_activity / api_statistics / module_statistics       │
+│                                                             │
+│  2. Redis 实时计数（快照、自动过期 2 天）                       │
+│     online / request_count / error_count ...                 │
+│                                                             │
+│  3. Logback 文件日志（排障、滚动、15 天 / 2GB）                 │
+│     logs/lemon-go.log                                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+> 一句话分工：**MySQL 管历史，Redis 管实时，Logback 管排障。**
+
+### 1. 日志对应的数据库表
+
+日志结构化数据全部落在 **MySQL 单库 `lemongo`**（utf8mb4，时区 `+08:00`）。涉及日志/统计的表共 **7 张**，其中 6 张在代码中真实读写，1 张为预留：
+
+| # | 表名 | 类型 | 用途 | 主键 / 写入时机 | 状态 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `request_log` | 逐条明细 | 请求访问日志 | 主键 `request_id`；请求结束时写入 | ✅ 活跃 |
+| 2 | `error_log` | 逐条明细 | 错误日志（含堆栈） | 自增 `id`；异常发生时写入 | ✅ 活跃 |
+| 3 | `login_log` | 逐条明细 | 登录 / 会话日志 | 自增 `id`；登录/退出/心跳时写入 | ✅ 活跃 |
+| 4 | `user_activity` | 日维度聚合 | 用户活跃度 | `(user_id, stat_date)` 唯一；请求后 upsert | ✅ 活跃 |
+| 5 | `api_statistics` | 日维度聚合 | 接口统计 | `(stat_date, api_id)` 唯一；请求后 upsert | ✅ 活跃 |
+| 6 | `module_statistics` | 日维度聚合 | 模块统计 | `(stat_date, module_id)` 唯一；请求后 upsert | ✅ 活跃 |
+| 7 | `operation_log` | 逐条明细 | 操作审计日志 | 自增 `id` | ⚠️ 预留，未启用 |
+
+> `operation_log` 表已在 `01-schema.sql` 中定义（含操作类型、操作描述、结果码等字段），但当前代码**没有任何实体、Mapper 或写入逻辑引用它**，属于为后续"操作审计"预留的表，现阶段不会产生数据。
+
+#### 各表字段说明
+
+**① `request_log` —— 请求访问日志（核心表）**
+
+每次请求（除 `/api/auth/heartbeat` 心跳外）结束时由 `TraceCompletionService` 写入一条。主键即 `request_id`，天然支持按 Request ID 精确检索。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `request_id` | VARCHAR(60) | 请求唯一 ID（主键），贯穿全链路 |
+| `user_id` / `username` | BIGINT / VARCHAR(50) | 发起人（未登录为 NULL） |
+| `request_time` | DATETIME(3) | 请求开始时间 |
+| `client_ip` | VARCHAR(64) | 客户端 IP |
+| `http_method` / `uri` | VARCHAR | 方法、URI（含查询串摘要 `param_summary`） |
+| `controller_name` / `controller_method` | VARCHAR(100) | 首次经过的 Controller 及其方法 |
+| `service_name` / `mapper_name` | VARCHAR(100) | 首次经过的 Service、Mapper |
+| `module_id` / `module_name` | BIGINT / VARCHAR | 归属模块 |
+| `developer_id` / `developer_name` | BIGINT / VARCHAR | 归属开发者 |
+| `http_status` / `success` | INT / TINYINT | HTTP 状态码、是否成功（< 400 视为成功） |
+| `error_type` / `error_message` | VARCHAR | 异常类型、错误消息（截断至 2000 字符） |
+| `start_time` / `end_time` / `duration_ms` | DATETIME(3) / INT | 起止时间与总耗时 |
+| `created_at` | DATETIME(3) | 落库时间 |
+
+索引：`idx_request_time`、`idx_request_user(user_id, request_time)`、`idx_request_status(http_status, request_time)`、`idx_request_module(module_id, request_time)`、`idx_request_uri(uri)`。
+
+**② `error_log` —— 错误日志**
+
+异常由全局处理器定位责任链后写入。`stack_trace` 为 `MEDIUMTEXT`（应用层截断至 10 万字符），是定位线上问题的关键证据。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `request_id` | VARCHAR(60) | 关联请求 |
+| `api_id` / `module_id` / `developer_id` | BIGINT | 责任链定位结果 |
+| `error_code` / `error_type` | INT / VARCHAR | HTTP 状态码、错误类型（`PARAMETER_ERROR`/`AUTH_ERROR`/`NOT_FOUND`/`DATABASE_ERROR`/`SYSTEM_ERROR`） |
+| `error_message` | VARCHAR(2000) | 错误消息 |
+| `exception_class` | VARCHAR(255) | 异常类全名 |
+| `stack_trace` | MEDIUMTEXT | 完整堆栈（截断至 100k 字符） |
+| `occurred_at` | DATETIME(3) | 发生时间 |
+
+**③ `login_log` —— 登录 / 会话日志**
+
+记录每次登录尝试与页面会话生命周期，用于统计"今日访问 / 累计访问 / 活跃时长"。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `user_id` / `username` | BIGINT / VARCHAR | 登录用户 |
+| `login_time` | DATETIME(3) | 登录时间 |
+| `login_ip` / `user_agent` | VARCHAR | 登录 IP、User-Agent |
+| `login_status` | TINYINT | 1 成功 / 0 失败 |
+| `fail_reason` | VARCHAR(255) | 失败原因 |
+| `last_active_time` / `logout_time` | DATETIME(3) | 最后活跃 / 退出时间 |
+| `active_seconds` | INT | 会话活跃时长（秒） |
+| `session_status` | TINYINT | 1 活跃 / 0 关闭 |
+
+**④ `user_activity` —— 用户活跃度（日维度聚合）**
+
+每用户每天一行，`(user_id, stat_date)` 唯一，请求后累加更新。
+
+| 字段 | 说明 |
+| --- | --- |
+| `stat_date` | 统计日期（日维度） |
+| `first_login_time` / `last_login_time` / `last_active_time` | 当日首/末登录、最后活跃 |
+| `request_count_today` / `request_count_total` | 今日 / 累计请求数 |
+| `active_seconds_today` / `active_seconds_total` | 今日 / 累计活跃时长 |
+| `activity_score` | 活跃度评分 |
+| `online_status` | 是否在线 |
+
+**⑤ `api_statistics` / `module_statistics` —— 日维度统计**
+
+分别以 `(stat_date, api_id)`、`(stat_date, module_id)` 为唯一键，记录每日请求数、成功数、错误数、总耗时、最大耗时，供监控台绘制趋势图。
+
+### 2. 存储时长（保留多久）
+
+| 载体 | 保留时长 | 说明 |
+| --- | --- | --- |
+| **MySQL 日志表** | **永久保留** | 无任何自动清理 / 归档机制。虽已 `@EnableScheduling`（`LemonGoApplication.java:11`），但代码中**没有任何 `@Scheduled` 定时任务**做日志过期或删除，MySQL 日志只增不减，除非人工清理 |
+| **Redis 实时计数** | **2 天过期** | 所有实时 key 统一调用 `redis.expire(key, Duration.ofDays(2))`（`RedisObservationService.java:42-46、112`） |
+| **Logback 文件** | **15 天** | `logback-spring.xml` 中 `maxHistory=15`，超过 15 天的滚动文件自动删除 |
+
+### 3. 存储容量（上限多大）
+
+| 载体 | 容量上限 | 说明 |
+| --- | --- | --- |
+| **MySQL** | **无上限** | 日志表未做分区、归档或大小约束，容量只受宿主机磁盘与 InnoDB 表空间限制，随流量无限增长。`stack_trace` 单条截断至 100k 字符，`error_message` 截断至 2000 字符，`param_summary` 上限 2000 字符 |
+| **Redis** | **无显式上限** | 未配置 `maxmemory` 淘汰策略，仅靠 2 天 TTL 自动过期；value 都是轻量计数器，内存占用很小 |
+| **Logback 文件** | **总容量 2GB** | 单文件 `maxFileSize=50MB`，总容量 `totalSizeCap=2GB`，滚动文件 gzip 压缩（`logback-spring.xml:17-19`） |
+
+### 4. 日志生命周期流转
+
+```text
+一个请求的生命周期：
+   开始 ──▶ TraceFilter 生成 request_id ──▶ AOP 采集分层耗时
+                                            │
+                                            ├──▶ 异常？──▶ 写 error_log
+                                            │
+   结束 ──▶ TraceCompletionService ──▶ 写 request_log
+                                      ├──▶ upsert user_activity（日维度）
+                                      ├──▶ upsert api_statistics / module_statistics（日维度）
+                                      ├──▶ 写 Redis 实时计数（2 天过期）
+                                      └──▶ WebSocket 广播 REQUEST_COMPLETED
+
+一个登录会话的生命周期：
+   登录 ──▶ 写 login_log（login_status=1, session_status=1）
+   心跳 ──▶ 更新 last_active_time / active_seconds
+   退出 ──▶ 更新 logout_time / session_status=0
+```
+
+### 5. 风险提示与建议
+
+当前 MySQL 日志为**永久保留、无容量上限**，长期运行后 `request_log`、`error_log` 会持续膨胀，是生产化前必须处理的一个点。可选方向：
+
+- 为 `request_log` / `error_log` 增加**分区表**或**定时归档任务**（按月归档、按天删除 N 天前数据）；
+- 对 `stack_trace` 大字段做**冷热分离**（热数据保留近期，老数据转冷存储）；
+- 启用 `operation_log`，把"谁在管理端改了什么"也纳入审计闭环。
 
 ---
 
