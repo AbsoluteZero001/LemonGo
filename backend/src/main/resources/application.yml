@@ -13,8 +13,8 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/lemongo?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:lemongo}
-    password: ${DB_PASSWORD:lemongo123}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
