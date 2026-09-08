@@ -26,46 +26,46 @@ public class GlobalExceptionHandler {
     private final ErrorTraceResolver errorTraceResolver;
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<Result<ErrorTraceVo>> handleBusiness(BusinessException ex) {
+    public ResponseEntity<Result<Void>> handleBusiness(BusinessException ex) {
         HttpStatus status = HttpStatus.resolve(ex.getCode());
         return build(status == null ? HttpStatus.BAD_REQUEST : status, ex.getMessage(), ex);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Result<ErrorTraceVo>> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Result<Void>> handleValidation(MethodArgumentNotValidException ex) {
         String message = firstFieldError(ex);
         return build(HttpStatus.BAD_REQUEST, message, ex);
     }
 
     @ExceptionHandler(BindException.class)
-    public ResponseEntity<Result<ErrorTraceVo>> handleBind(BindException ex) {
+    public ResponseEntity<Result<Void>> handleBind(BindException ex) {
         return build(HttpStatus.BAD_REQUEST, firstFieldError(ex), ex);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Result<ErrorTraceVo>> handleUnreadable(HttpMessageNotReadableException ex) {
+    public ResponseEntity<Result<Void>> handleUnreadable(HttpMessageNotReadableException ex) {
         return build(HttpStatus.BAD_REQUEST, "请求体格式不正确", ex);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<Result<ErrorTraceVo>> handleNotFound(NoResourceFoundException ex) {
+    public ResponseEntity<Result<Void>> handleNotFound(NoResourceFoundException ex) {
         return build(HttpStatus.NOT_FOUND, "请求的资源不存在", ex);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<Result<ErrorTraceVo>> handleMethodNotSupported(
+    public ResponseEntity<Result<Void>> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException ex) {
         return build(HttpStatus.METHOD_NOT_ALLOWED, "不支持的 HTTP 方法", ex);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Result<ErrorTraceVo>> handleGeneric(Exception ex) {
+    public ResponseEntity<Result<Void>> handleGeneric(Exception ex) {
         log.error("Unhandled exception", ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
                 ResultCode.INTERNAL_ERROR.getDefaultMessage(), ex);
     }
 
-    private ResponseEntity<Result<ErrorTraceVo>> build(
+    private ResponseEntity<Result<Void>> build(
             HttpStatus status,
             String message,
             Throwable ex) {
@@ -78,7 +78,7 @@ public class GlobalExceptionHandler {
                     trace.requestId(), trace.path(), status.value(), message);
         }
         return ResponseEntity.status(status)
-                .body(Result.failWithData(status.value(), message, trace));
+                .body(Result.fail(status.value(), message));
     }
 
     private String firstFieldError(BindException ex) {

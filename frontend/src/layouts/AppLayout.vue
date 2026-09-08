@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { SwitchButton } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
-import ErrorTracePanel from '@/components/ErrorTracePanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -111,7 +110,6 @@ function logout() {
         </div>
       </el-header>
       <el-main class="app-main">
-        <ErrorTracePanel />
         <RouterView />
       </el-main>
     </el-container>
