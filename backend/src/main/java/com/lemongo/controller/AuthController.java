@@ -2,6 +2,7 @@ package com.lemongo.controller;
 
 import com.lemongo.common.api.Result;
 import com.lemongo.dto.LoginRequest;
+import com.lemongo.dto.RegisterRequest;
 import com.lemongo.service.AuthService;
 import com.lemongo.vo.LoginVo;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,5 +25,12 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
         return Result.ok(authService.login(request, httpRequest));
+    }
+
+    @PostMapping("/auth/register")
+    public Result<LoginVo> register(
+            @Valid @RequestBody RegisterRequest request,
+            HttpServletRequest httpRequest) {
+        return Result.ok(authService.register(request, httpRequest));
     }
 }

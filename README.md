@@ -188,7 +188,7 @@ npm run dev
 | 模块 | 方法 & 路径 | 说明 |
 | --- | --- | --- |
 | 健康检查 | `GET /api/health` | 健康检查 |
-| 认证 | `POST /api/auth/login` | 登录 |
+| 认证 | `POST /api/auth/login` · `POST /api/auth/register` | 登录 / 注册（注册自动登录并生成 `USER` 账号） |
 | 用户 | `GET /api/users/me` · `GET /api/users/me/activity` | 当前用户信息 / 我的活跃度 |
 | 商品 | `GET /api/products` · `GET /api/products/categories` · `GET/POST /api/products` · `GET/PUT/DELETE /api/products/{id}` | 商品列表 / 分类 / 新增 / 详情 / 更新 / 删除 |
 | 购物车 | `GET/POST /api/cart/items` · `PUT/DELETE /api/cart/items/{id}` | 购物车列表 / 加入 / 修改数量 / 移除 |

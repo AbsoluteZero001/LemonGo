@@ -290,6 +290,14 @@ export function login(username: string, password: string) {
   return post<LoginResult>('/auth/login', { username, password })
 }
 
+export function register(username: string, password: string, nickname?: string) {
+  return post<LoginResult>('/auth/register', {
+    username,
+    password,
+    ...(nickname ? { nickname } : {}),
+  })
+}
+
 export function fetchMe() {
   return get<Profile>('/users/me')
 }

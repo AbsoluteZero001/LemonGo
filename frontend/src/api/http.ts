@@ -33,6 +33,25 @@ function notifyError(message: string) {
   ElMessage.error(message || '请求失败')
 }
 
+function resolveErrorMessage(error: unknown): string {
+  const err = error as {
+    response?: { data?: ApiResult<unknown> }
+    code?: string
+    message?: string
+  }
+  const body = err?.response?.data
+  if (body?.message) {
+    return body.message
+  }
+  if (err?.code === 'ECONNABORTED') {
+    return '请求超时，请稍后重试'
+  }
+  if (err?.message === 'Network Error') {
+    return '网络连接失败，请检查网络'
+  }
+  return '网络请求失败'
+}
+
 http.interceptors.response.use(
   (response) => {
     const body = response.data as ApiResult<unknown>
@@ -43,8 +62,7 @@ http.interceptors.response.use(
     return Promise.reject(new Error(body.message))
   },
   (error) => {
-    const body = error?.response?.data as ApiResult<unknown> | undefined
-    notifyError(body?.message || error?.message || '网络请求失败')
+    notifyError(resolveErrorMessage(error))
     return Promise.reject(error)
   },
 )

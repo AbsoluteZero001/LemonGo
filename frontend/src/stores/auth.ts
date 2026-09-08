@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { fetchMe, login as loginRequest } from '@/api/system'
+import { fetchMe, login as loginRequest, register as registerRequest } from '@/api/system'
 import type { Profile } from '@/api/system'
 
 const TOKEN_KEY = 'lemongo_token'
@@ -28,6 +28,13 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async login(username: string, password: string) {
       const result = await loginRequest(username, password)
+      this.token = result.token
+      this.profile = result.profile
+      localStorage.setItem(TOKEN_KEY, result.token)
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(result.profile))
+    },
+    async register(username: string, password: string, nickname?: string) {
+      const result = await registerRequest(username, password, nickname)
       this.token = result.token
       this.profile = result.profile
       localStorage.setItem(TOKEN_KEY, result.token)

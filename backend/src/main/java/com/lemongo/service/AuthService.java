@@ -5,6 +5,7 @@ import com.lemongo.common.api.ResultCode;
 import com.lemongo.common.context.RequestContext;
 import com.lemongo.config.JwtTokenService;
 import com.lemongo.dto.LoginRequest;
+import com.lemongo.dto.RegisterRequest;
 import com.lemongo.entity.LoginLog;
 import com.lemongo.entity.SysUser;
 import com.lemongo.exception.BusinessException;
@@ -71,6 +72,46 @@ public class AuthService {
         return new LoginVo(tokenService.createToken(user), toProfile(user));
     }
 
+    public LoginVo register(RegisterRequest request, HttpServletRequest httpRequest) {
+        Long exists = userMapper.selectCount(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, request.username()));
+        if (exists != null && exists > 0) {
+            throw new BusinessException(ResultCode.BAD_REQUEST.getCode(), "用户名已存在");
+        }
+
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Shanghai"));
+        SysUser user = new SysUser();
+        user.setUsername(request.username());
+        user.setPasswordHash("{seed}" + request.password());
+        user.setNickname(request.nickname() == null || request.nickname().isBlank()
+                ? request.username() : request.nickname().trim());
+        user.setEmail(blankToNull(request.email()));
+        user.setPhone(blankToNull(request.phone()));
+        user.setStatus(1);
+        user.setRole("USER");
+        user.setOnlineStatus(1);
+        user.setFirstLoginTime(now);
+        user.setLastLoginTime(now);
+        user.setLastVisitTime(now);
+        user.setLastActiveTime(now);
+        user.setActivityScore(2);
+        user.setCreatedAt(now);
+        userMapper.insert(user);
+
+        LoginLog loginLog = new LoginLog();
+        loginLog.setUserId(user.getId());
+        loginLog.setUsername(user.getUsername());
+        loginLog.setLoginTime(now);
+        loginLog.setLoginIp(clientIp(httpRequest));
+        loginLog.setUserAgent(httpRequest.getHeader("User-Agent"));
+        loginLog.setLoginStatus(1);
+        loginLog.setCreatedAt(now);
+        loginLogMapper.insert(loginLog);
+
+        RequestContext.setUser(user.getId(), user.getUsername());
+        return new LoginVo(tokenService.createToken(user), toProfile(user));
+    }
+
     public static ProfileVo toProfile(SysUser user) {
         return new ProfileVo(
                 user.getId(),
@@ -88,6 +129,10 @@ public class AuthService {
     private boolean validPassword(SysUser user, String password) {
         return user.getPasswordHash() != null
                 && user.getPasswordHash().equals("{seed}" + password);
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private String clientIp(HttpServletRequest request) {

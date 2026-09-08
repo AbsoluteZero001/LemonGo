@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, User } from '@element-plus/icons-vue'
@@ -7,24 +7,77 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
-const loading = ref(false)
+const mode = ref<'login' | 'register'>('login')
+const submitting = ref(false)
+const progress = ref(0)
+
 const form = reactive({
   username: '',
   password: '',
+  confirmPassword: '',
+  nickname: '',
 })
 
+const progressStatus = computed(() => (progress.value === 100 ? 'success' : ''))
+
+function switchMode() {
+  if (submitting.value) return
+  mode.value = mode.value === 'login' ? 'register' : 'login'
+  progress.value = 0
+  form.password = ''
+  form.confirmPassword = ''
+}
+
 async function submit() {
-  loading.value = true
+  if (submitting.value) return
+  if (!form.username.trim()) {
+    ElMessage.error('请输入用户名')
+    return
+  }
+  if (!form.password) {
+    ElMessage.error('请输入密码')
+    return
+  }
+  if (mode.value === 'register') {
+    if (form.password.length < 6) {
+      ElMessage.error('密码长度不能少于 6 位')
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      ElMessage.error('两次输入的密码不一致')
+      return
+    }
+  }
+
+  submitting.value = true
+  progress.value = 0
+  const timer = window.setInterval(() => {
+    if (progress.value < 90) {
+      progress.value = Math.min(90, progress.value + 3)
+    }
+  }, 90)
+
   try {
-    await auth.login(form.username, form.password)
-    ElMessage.success(`欢迎回来，${auth.profile?.nickname ?? ''}`)
+    if (mode.value === 'login') {
+      await auth.login(form.username.trim(), form.password)
+    } else {
+      await auth.register(form.username.trim(), form.password, form.nickname.trim() || undefined)
+    }
+    progress.value = 100
+    await new Promise((resolve) => setTimeout(resolve, 260))
+    ElMessage.success(
+      mode.value === 'login'
+        ? `欢迎回来，${auth.profile?.nickname ?? ''}`
+        : '注册成功，欢迎加入 LemonGo',
+    )
     const home =
       auth.role === 'ADMIN' ? '/admin' : auth.role === 'MONITOR' ? '/monitor' : '/products'
     router.push(home)
   } catch {
-    // The shared error panel already shows the backend trace.
+    progress.value = 0
   } finally {
-    loading.value = false
+    window.clearInterval(timer)
+    submitting.value = false
   }
 }
 </script>
@@ -39,10 +92,13 @@ async function submit() {
           <p>乐檬购</p>
         </div>
       </div>
-      <h2>登录</h2>
+      <h2>{{ mode === 'login' ? '登录' : '注册' }}</h2>
       <el-form label-position="top" @submit.prevent="submit">
         <el-form-item label="用户名">
           <el-input v-model="form.username" size="large" :prefix-icon="User" />
+        </el-form-item>
+        <el-form-item v-if="mode === 'register'" label="昵称（选填）">
+          <el-input v-model="form.nickname" size="large" :prefix-icon="User" />
         </el-form-item>
         <el-form-item label="密码">
           <el-input
@@ -53,16 +109,46 @@ async function submit() {
             :prefix-icon="Lock"
           />
         </el-form-item>
+        <el-form-item v-if="mode === 'register'" label="确认密码">
+          <el-input
+            v-model="form.confirmPassword"
+            type="password"
+            size="large"
+            show-password
+            :prefix-icon="Lock"
+          />
+        </el-form-item>
         <el-button
           type="primary"
           size="large"
           class="login-button"
-          :loading="loading"
+          :disabled="submitting"
           native-type="submit"
         >
-          登录
+          {{
+            submitting
+              ? mode === 'login'
+                ? '登录中…'
+                : '注册中…'
+              : mode === 'login'
+                ? '登录'
+                : '注册'
+          }}
         </el-button>
+        <el-progress
+          v-if="submitting"
+          :percentage="progress"
+          :stroke-width="6"
+          :status="progressStatus"
+          class="login-progress"
+        />
       </el-form>
+      <div class="login-switch">
+        <span>{{ mode === 'login' ? '还没有账号？' : '已有账号？' }}</span>
+        <el-button link type="primary" @click="switchMode">
+          {{ mode === 'login' ? '去注册' : '去登录' }}
+        </el-button>
+      </div>
     </section>
   </div>
 </template>
@@ -124,5 +210,19 @@ async function submit() {
 .login-button {
   width: 100%;
   margin-top: 6px;
+}
+
+.login-progress {
+  margin-top: 14px;
+}
+
+.login-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 18px;
+  color: #6b7280;
+  font-size: 13px;
 }
 </style>
