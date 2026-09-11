@@ -24,11 +24,14 @@ LemonGo 刻意保持小体量：用 **用户、商品、购物车、订单 + 模
 - [目录结构](#目录结构)
 - [快速开始](#快速开始)
 - [演示账号](#演示账号)
+- [前端路由](#前端路由)
 - [环境变量](#环境变量)
 - [API 概览](#api-概览)
+- [实时链路（WebSocket）](#实时链路websocket)
 - [日志体系详解](#日志体系详解)
 - [常用命令](#常用命令)
 - [当前进度](#当前进度)
+- [常见问题](#常见问题)
 - [License](#license)
 
 ---
@@ -180,8 +183,9 @@ LemonGo
 │   └── src/
 │       ├── views/user/         商品、购物车、订单、个人中心
 │       ├── views/admin/        商品、用户、订单、开发者、模块、接口管理
-│       ├── views/monitor/      Dashboard、请求日志、接口注册表、异常、活跃度
-│       ├── api/                接口请求封装
+│       ├── views/monitor/      Dashboard、实时链路、接口注册表、异常日志
+│       ├── views/              request-log/、users/、modules/、developers/ 监控页面
+│       ├── api/                接口请求封装与 WebSocket 实时订阅
 │       ├── stores/             登录状态与应用状态
 │       ├── router/             三端路由与角色守卫
 │       └── layouts/            通用布局
@@ -269,7 +273,7 @@ npm install
 npm run dev
 ```
 
-前端开发服务器运行在 `http://localhost:5173`，`/api` 请求已代理到 `http://localhost:8080`。
+前端开发服务器运行在 `http://localhost:5173`，`/api` 与 `/ws` 已分别代理到 `http://localhost:8080` 和 `ws://localhost:8080`。
 
 ### 5. 本地入口
 
@@ -304,6 +308,27 @@ npm run dev
 
 ---
 
+## 前端路由
+
+前端是单页应用，路由守卫按角色分流：登录后 `USER` 进入用户端、`ADMIN` 进入管理端、`MONITOR` 进入监控台；访问越权路由会被重定向回本角色首页。
+
+| 入口 | 路由 | 所需角色 |
+| --- | --- | --- |
+| 登录 | `/login` | 公开 |
+| 商品列表 / 商品详情 | `/products` · `/products/:id` | `USER` |
+| 购物车 | `/cart` | `USER` |
+| 我的订单 | `/orders` | `USER` |
+| 个人中心 | `/profile` | `USER` |
+| 商品 / 用户 / 订单管理 | `/admin/products` · `/admin/users` · `/admin/orders` | `ADMIN` |
+| 开发者 / 模块 / 接口管理 | `/admin/developers` · `/admin/modules` · `/admin/apis` | `ADMIN` |
+| 监控总览 | `/monitor` | `MONITOR` |
+| 实时链路 | `/monitor/live` | `MONITOR` |
+| 请求日志 / 请求详情 | `/monitor/requests` · `/monitor/requests/:requestId` | `MONITOR` |
+| 接口注册表 / 异常日志 | `/monitor/apis` · `/monitor/errors` | `MONITOR` |
+| 用户活跃 / 模块 / 开发者监控 | `/monitor/users` · `/monitor/modules` · `/monitor/developers` | `MONITOR` |
+
+---
+
 ## 环境变量
 
 ### Docker Compose（`.env`）
@@ -327,6 +352,7 @@ npm run dev
 | `REDIS_HOST` | `localhost` | Redis 地址 |
 | `REDIS_PORT` | `6379` | Redis 端口 |
 | `REDIS_PASSWORD` | 空 | Redis 密码 |
+| `LOG_PATH` | `logs` | Logback 文件日志目录（相对后端运行目录） |
 | `LEMONGO_JWT_SECRET` | 演示默认值 | JWT 签名密钥，脱离本地演示环境前必须修改 |
 
 `application-prod.yml` 使用 `${DB_URL}`、`${DB_USERNAME}`、`${DB_PASSWORD}` 且不提供兜底默认值，因此以 `SPRING_PROFILES_ACTIVE=prod` 运行时必须显式提供数据库环境变量，并自行指定 `LEMONGO_JWT_SECRET`。
@@ -348,6 +374,65 @@ npm run dev
 | 模拟异常 | `GET /api/test/error/{400,404,500,database,service}` | 五类异常演示 |
 
 完整接口定义以 Swagger UI（`/swagger-ui.html`）为准。
+
+### 统一响应格式
+
+除 WebSocket 外，所有接口都返回统一结构；`requestId` 与响应头 `X-Request-Id` 一致，可直接拿去监控台检索这条请求。
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {},
+  "requestId": "REQ-20260911103000001",
+  "timestamp": "2026-09-11T10:30:00"
+}
+```
+
+出错时结构不变，HTTP 状态码与 `code` 一致（`400` / `401` / `403` / `404` / `500`），`data` 为 `null`；异常类型、堆栈与责任链定位会写入 `error_log`，可在监控台"异常日志"或请求详情中查看。
+
+---
+
+## 实时链路（WebSocket）
+
+监控台"实时链路"页面通过 WebSocket 订阅请求完成事件：
+
+| 项 | 值 |
+| --- | --- |
+| 地址 | `ws://localhost:8080/ws/monitor?token=<JWT>` |
+| 鉴权 | 握手时通过 `token` 查询参数传入 JWT，角色必须为 `MONITOR`，否则握手返回 401 / 403 |
+| 开发环境 | 前端连接 `ws://localhost:5173/ws/monitor`，由 Vite 将 `/ws` 代理转发到后端 |
+| 事件类型 | `REQUEST_COMPLETED`，每次请求落库后广播一次（`/api/auth/heartbeat` 心跳除外） |
+
+事件负载示例：
+
+```json
+{
+  "type": "REQUEST_COMPLETED",
+  "data": {
+    "requestLog": {
+      "requestId": "REQ-20260911103000001",
+      "username": "zhangsan",
+      "httpMethod": "GET",
+      "uri": "/api/products",
+      "httpStatus": 200,
+      "success": 1,
+      "durationMs": 23
+    },
+    "layers": [
+      {
+        "layerType": "CONTROLLER",
+        "layerName": "ProductController",
+        "layerMethod": "list",
+        "description": "HTTP 适配层"
+      }
+    ]
+  },
+  "timestamp": "2026-09-11T10:30:00"
+}
+```
+
+前端订阅逻辑在 `frontend/src/api/realtime.ts`：断线后按指数退避自动重连（最长 5s）；没有任何订阅者时主动断开，避免空连接常驻。
 
 ---
 
@@ -534,6 +619,30 @@ npm run build
 - **M4 部署、测试与验收（进行中）**：Docker Compose 全栈、初始化演示数据、自动化测试、端到端验收。
 
 详细里程碑见 [docs/02-roadmap.md](docs/02-roadmap.md)。
+
+---
+
+## 常见问题
+
+**端口被占用怎么办？**
+
+MySQL / Redis 的宿主机端口改 `.env` 里的 `MYSQL_PORT`、`REDIS_PORT`；后端端口用 `SERVER_PORT`；前端端口在 `frontend/vite.config.ts` 的 `server.port`。
+
+**改了 `database/init/` 里的 SQL，为什么没有生效？**
+
+初始化脚本只在 MySQL 数据卷首次创建时执行。需要重新初始化时执行 `docker compose down -v` 后再 `docker compose up -d`，注意这会清空本地 MySQL 与 Redis 数据。
+
+**后端启动报 `Access denied for user`？**
+
+Compose 内建的应用账号是 `lemongo / lemongo123`，而后端默认配置是 `root / 123456`。二选一：要么按"启动后端"一节的命令传入 `DB_USERNAME` / `DB_PASSWORD`，要么让本机 MySQL 使用默认的 root 账号。
+
+**监控台"实时链路"一直连不上？**
+
+WebSocket 握手要求 `MONITOR` 角色，请用 `monitor` 账号登录；同时确认后端已启动、浏览器地址与 Vite 代理配置一致。握手失败时后端会返回 401（缺少或无效 Token）或 403（角色不符）。
+
+**用 `SPRING_PROFILES_ACTIVE=prod` 启动失败？**
+
+`application-prod.yml` 不给数据库配置兜底值，必须显式提供 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD`，并自行指定 `LEMONGO_JWT_SECRET`。
 
 ---
 
