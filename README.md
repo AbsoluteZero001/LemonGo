@@ -109,10 +109,12 @@ LemonGo 用四个真实业务域 + 模拟支付，构成一条**最小但完整�
 | --- | --- | --- |
 | 后端 | Java | 21 |
 | 后端 | Spring Boot | 3.5.x |
+| 后端 | Spring WebSocket | Spring Boot 内建（`spring-boot-starter-websocket`） |
 | 后端 | MyBatis-Plus | 3.5.17 |
 | 后端 | SpringDoc (OpenAPI) | 2.8.17 |
 | 后端 | JJWT | 0.12.7 |
 | 前端 | Vue | 3.5.x |
+| 前端 | WebSocket | 浏览器原生 API（`frontend/src/api/realtime.ts`） |
 | 前端 | Vite | 8.x |
 | 前端 | TypeScript | 6.x |
 | 前端 | Element Plus | 2.11.x |
