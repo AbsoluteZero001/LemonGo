@@ -1,0 +1,109 @@
+name: Deploy LemonGo
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: lemongo-production
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build backend
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests
+
+      - name: Prepare backend artifact
+        run: |
+          mkdir -p deploy
+          JAR_FILE="$(find backend/target -maxdepth 1 -type f -name '*.jar' ! -name '*sources.jar' ! -name '*javadoc.jar' | head -n 1)"
+          test -n "$JAR_FILE"
+          cp "$JAR_FILE" deploy/LemonGo.jar
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Prepare frontend artifact
+        run: |
+          test -f frontend/dist/index.html
+          cp -a frontend/dist deploy/dist
+
+      - name: Configure SSH
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/lemongo_ci
+          chmod 600 ~/.ssh/lemongo_ci
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Test SSH
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -i ~/.ssh/lemongo_ci "$SERVER_USER@$SERVER_HOST" "echo SSH_OK"
+
+      - name: Clean incoming
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -i ~/.ssh/lemongo_ci "$SERVER_USER@$SERVER_HOST" "rm -rf /opt/lemongo/incoming/*"
+
+      - name: Upload backend
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          scp -i ~/.ssh/lemongo_ci deploy/LemonGo.jar \
+            "$SERVER_USER@$SERVER_HOST:/opt/lemongo/incoming/LemonGo.jar"
+
+      - name: Upload frontend
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          scp -i ~/.ssh/lemongo_ci -r deploy/dist \
+            "$SERVER_USER@$SERVER_HOST:/opt/lemongo/incoming/dist"
+
+      - name: Deploy production
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -i ~/.ssh/lemongo_ci "$SERVER_USER@$SERVER_HOST" \
+            "sudo /opt/lemongo/deploy.sh"
